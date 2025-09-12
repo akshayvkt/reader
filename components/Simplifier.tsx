@@ -43,11 +43,8 @@ export default function Simplifier({ text, position, onClose }: SimplifierProps)
   };
 
   useEffect(() => {
-    if (text.split(' ').length === 1) {
-      setSimplified(`Definition: ${text} - [Would fetch dictionary definition here]`);
-    } else {
-      simplifyText();
-    }
+    // Always use AI for simplification, whether single word or phrase
+    simplifyText();
   }, [text]);
 
   return (

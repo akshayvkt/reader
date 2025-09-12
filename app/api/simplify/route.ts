@@ -65,23 +65,32 @@ export async function POST(request: NextRequest) {
       contents: [{
         role: 'user',
         parts: [{
-          text: `You are a helpful reading assistant. Your job is to simplify complex or confusing text into plain, easy-to-understand English.
+          text: `You are an expert reading companion helping someone understand complex literature. The reader is intelligent but wants clarity on dense, archaic, or overly complex prose.
 
-Text to simplify: "${text}"
+Selected text: "${text}"
 
-Instructions:
-- If it's a single word, provide a simple definition
-- If it's a phrase or sentence, rewrite it in simpler terms
-- Keep the meaning intact but make it accessible to a general reader
-- Be concise - aim for clarity, not length
-- Don't add extra commentary, just provide the simplified version
+Provide a clear, modern English explanation that:
+- Preserves the original meaning and nuance
+- Uses everyday language a smart reader would understand  
+- For single words: Give a concise definition in context
+- For phrases/sentences: Rewrite in plain, contemporary English
+- For technical/specialized terms: Explain what it means in this context
+- Keep explanations brief but complete (1-2 sentences max)
+- Match the tone - if it's dramatic prose, keep some drama; if technical, stay precise
 
-Simplified version:`
+Example transformations:
+"a nanophone was hidden somewhere in the lace collar of her pinafore" → "She had a tiny communication device hidden in the lace collar of her dress"
+"perspicacious" → "having keen insight or good judgment"
+"The edifice stood athwart the thoroughfare" → "The building stood across/blocking the street"
+
+Your explanation:`
         }]
       }],
       generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 500,
+        temperature: 0.8,
+        maxOutputTokens: 300,
+        topP: 0.95,
+        topK: 40,
       }
     };
 
