@@ -408,7 +408,19 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
         <Simplifier
           text={selectedText}
           position={selectionPosition}
-          onClose={() => setShowSimplifier(false)}
+          onClose={() => {
+            setShowSimplifier(false);
+            // Clear text selection in the epub reader
+            if (rendition) {
+              const contents = rendition.getContents();
+              contents.forEach((content: Contents) => {
+                const selection = content.window.getSelection();
+                if (selection) {
+                  selection.removeAllRanges();
+                }
+              });
+            }
+          }}
         />
       )}
     </div>
