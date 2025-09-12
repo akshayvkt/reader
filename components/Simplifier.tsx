@@ -25,8 +25,40 @@ export default function Simplifier({ text, position, onClose }: SimplifierProps)
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
+  const fetchDictionaryDefinition = async (word: string) => {
+    try {
+      const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word.toLowerCase()}`);
+      if (!response.ok) throw new Error('Word not found');
+      
+      const data = await response.json();
+      const meanings = data[0]?.meanings || [];
+      
+      // Format the definition nicely
+      const definitions = meanings.slice(0, 2).map((m: any) => 
+        `${m.partOfSpeech}: ${m.definitions[0]?.definition}`
+      ).join('; ');
+      
+      return definitions || 'No definition found';
+    } catch (error) {
+      // Fall back to AI if dictionary fails
+      return null;
+    }
+  };
+
   const simplifyText = async () => {
     setLoading(true);
+    
+    // For single words, try dictionary first
+    if (text.split(' ').length === 1) {
+      const dictDefinition = await fetchDictionaryDefinition(text);
+      if (dictDefinition) {
+        setSimplified(dictDefinition);
+        setLoading(false);
+        return;
+      }
+    }
+    
+    // Use AI for phrases or if dictionary fails
     try {
       const response = await fetch('/api/simplify', {
         method: 'POST',
