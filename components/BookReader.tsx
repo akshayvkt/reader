@@ -6,7 +6,7 @@ import type { Rendition, Contents } from 'epubjs';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Simplifier from './Simplifier';
 
-interface BookReaderProps {
+export interface BookReaderProps {
   bookData: ArrayBuffer;
   onClose: () => void;
 }

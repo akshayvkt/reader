@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { BookOpen } from 'lucide-react';
-import BookReader from '@/components/BookReader';
+import BookReaderWrapper from '@/components/BookReaderWrapper';
 
 export default function Home() {
   const [bookData, setBookData] = useState<ArrayBuffer | null>(null);
