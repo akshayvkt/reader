@@ -19,12 +19,21 @@ declare module 'epubjs' {
     display(target?: string | number): Promise<void>;
     next(): Promise<void>;
     prev(): Promise<void>;
-    on(event: string, callback: Function): void;
-    off(event: string, callback: Function): void;
+    on(event: string, callback: (...args: unknown[]) => void): void;
+    off(event: string, callback: (...args: unknown[]) => void): void;
     currentLocation(): Location;
     destroy(): void;
     resize(width: number, height: number): void;
     getContents(): Contents[];
+    themes: Themes;
+  }
+
+  export interface Themes {
+    default(styles: Record<string, Record<string, string>>): void;
+    fontSize(size: string): void;
+    font(fontFamily: string): void;
+    override(name: string, value: string): void;
+    overrides(styles: Record<string, string>): void;
   }
 
   export interface Contents {
