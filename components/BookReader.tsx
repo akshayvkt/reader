@@ -13,6 +13,7 @@ interface BookReaderProps {
 
 export default function BookReader({ bookData, onClose }: BookReaderProps) {
   const viewerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [rendition, setRendition] = useState<Rendition | null>(null);
   const [selectedText, setSelectedText] = useState('');
   const [selectionPosition, setSelectionPosition] = useState({ x: 0, y: 0 });
@@ -32,6 +33,8 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
     rend.display().then(() => {
       console.log('Book displayed successfully');
       setRendition(rend);
+      // Focus the container to ensure keyboard events work
+      containerRef.current?.focus();
     }).catch((error: any) => {
       console.error('Error displaying book:', error);
     });
@@ -69,10 +72,14 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
 
   const nextPage = useCallback(() => {
     rendition?.next();
+    // Refocus container to maintain keyboard navigation
+    containerRef.current?.focus();
   }, [rendition]);
 
   const prevPage = useCallback(() => {
     rendition?.prev();
+    // Refocus container to maintain keyboard navigation
+    containerRef.current?.focus();
   }, [rendition]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -87,7 +94,11 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
   }, [handleKeyDown]);
 
   return (
-    <div className="fixed inset-0 bg-gray-50 flex flex-col">
+    <div 
+      ref={containerRef}
+      className="fixed inset-0 bg-gray-50 flex flex-col outline-none"
+      tabIndex={0}
+    >
       {/* Minimal header - auto-hides */}
       <header className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 bg-gradient-to-b from-white/90 to-transparent transition-opacity hover:opacity-100 opacity-0">
         <button
@@ -101,26 +112,24 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
       <div className="flex-1 relative">
         <div ref={viewerRef} className="w-full h-full" />
         
-        {/* Larger, more subtle navigation areas */}
-        <button
-          onClick={prevPage}
-          className="absolute left-0 top-0 bottom-0 w-1/5 flex items-center justify-start pl-4 opacity-0 hover:opacity-100 transition-opacity"
-          aria-label="Previous page"
-        >
-          <div className="p-3 rounded-full bg-black/5 hover:bg-black/10">
-            <ChevronLeft className="w-5 h-5 text-gray-600" />
-          </div>
-        </button>
+        {/* Visible navigation buttons at bottom */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4 z-10">
+          <button
+            onClick={prevPage}
+            className="p-2 rounded-full bg-white/90 hover:bg-white shadow-lg transition-all"
+            aria-label="Previous page"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-700" />
+          </button>
 
-        <button
-          onClick={nextPage}
-          className="absolute right-0 top-0 bottom-0 w-1/5 flex items-center justify-end pr-4 opacity-0 hover:opacity-100 transition-opacity"
-          aria-label="Next page"
-        >
-          <div className="p-3 rounded-full bg-black/5 hover:bg-black/10">
-            <ChevronRight className="w-5 h-5 text-gray-600" />
-          </div>
-        </button>
+          <button
+            onClick={nextPage}
+            className="p-2 rounded-full bg-white/90 hover:bg-white shadow-lg transition-all"
+            aria-label="Next page"
+          >
+            <ChevronRight className="w-5 h-5 text-gray-700" />
+          </button>
+        </div>
       </div>
 
       {showSimplifier && (

@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         parts: [{
           text: `You are an expert reading companion helping someone understand complex literature. The reader is intelligent but wants clarity on dense, archaic, or overly complex prose.
 
-Selected text: "${text}"
+Text to simplify: "${text}"
 
 Provide a clear, modern English explanation that:
 - Preserves the original meaning and nuance
@@ -83,12 +83,12 @@ Example transformations:
 "perspicacious" → "having keen insight or good judgment"
 "The edifice stood athwart the thoroughfare" → "The building stood across/blocking the street"
 
-Your explanation:`
+Simplified explanation (do NOT repeat the original text):`
         }]
       }],
       generationConfig: {
-        temperature: 0.8,
-        maxOutputTokens: 300,
+        temperature: 0.2,
+        maxOutputTokens: 800,
         topP: 0.95,
         topK: 40,
       }
