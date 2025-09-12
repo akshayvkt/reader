@@ -10,7 +10,7 @@ interface SimplifierProps {
   onClose: () => void;
 }
 
-export default function Simplifier({ text, position, onClose }: SimplifierProps) {
+export default function Simplifier({ text, onClose }: SimplifierProps) {
   const [simplified, setSimplified] = useState('');
   const [loading, setLoading] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -49,7 +49,7 @@ export default function Simplifier({ text, position, onClose }: SimplifierProps)
       const meanings = data[0]?.meanings || [];
       
       // Format the definition nicely
-      const definitions = meanings.slice(0, 2).map((m: any) => 
+      const definitions = meanings.slice(0, 2).map((m: { partOfSpeech: string; definitions: Array<{ definition: string }> }) => 
         `${m.partOfSpeech}: ${m.definitions[0]?.definition}`
       ).join('; ');
       

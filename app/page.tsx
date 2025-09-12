@@ -42,7 +42,7 @@ export default function Home() {
   }, [handleFileUpload]);
 
   if (bookData) {
-    return <BookReader bookData={bookData} onClose={() => setBookData(null)} />;
+    return <BookReaderWrapper bookData={bookData} onClose={() => setBookData(null)} />;
   }
 
   return (

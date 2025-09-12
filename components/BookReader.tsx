@@ -35,7 +35,7 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
       setRendition(rend);
       // Focus the container to ensure keyboard events work
       containerRef.current?.focus();
-    }).catch((error: any) => {
+    }).catch((error: unknown) => {
       console.error('Error displaying book:', error);
     });
 
@@ -61,7 +61,7 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
       rend.display(savedLocation);
     }
 
-    rend.on('relocated', (location: any) => {
+    rend.on('relocated', (location: { start: { cfi: string } }) => {
       localStorage.setItem(`book-location-${bookId}`, location.start.cfi);
     });
 
