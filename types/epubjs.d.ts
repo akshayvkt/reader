@@ -1,6 +1,6 @@
 declare module 'epubjs' {
   export default class ePub {
-    constructor(url: string);
+    constructor(url: string | ArrayBuffer, options?: { openAs?: 'binary' | 'base64' | 'epub' | 'opf' | 'json' | 'directory' });
     renderTo(element: string | HTMLElement, options?: {
       width?: string | number;
       height?: string | number;

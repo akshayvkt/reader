@@ -7,11 +7,11 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Simplifier from './Simplifier';
 
 interface BookReaderProps {
-  url: string;
+  bookData: ArrayBuffer;
   onClose: () => void;
 }
 
-export default function BookReader({ url, onClose }: BookReaderProps) {
+export default function BookReader({ bookData, onClose }: BookReaderProps) {
   const viewerRef = useRef<HTMLDivElement>(null);
   const [rendition, setRendition] = useState<Rendition | null>(null);
   const [selectedText, setSelectedText] = useState('');
@@ -19,20 +19,25 @@ export default function BookReader({ url, onClose }: BookReaderProps) {
   const [showSimplifier, setShowSimplifier] = useState(false);
 
   useEffect(() => {
-    if (!viewerRef.current) return;
+    if (!viewerRef.current || !bookData) return;
 
-    const book = new ePub(url);
-    const rendition = book.renderTo(viewerRef.current, {
+    // Create book from ArrayBuffer with 'binary' option
+    const book = new ePub(bookData, { openAs: 'binary' });
+    const rend = book.renderTo(viewerRef.current, {
       width: '100%',
       height: '100%',
       flow: 'paginated',
     });
 
-    rendition.display();
-    setRendition(rendition);
+    rend.display().then(() => {
+      console.log('Book displayed successfully');
+      setRendition(rend);
+    }).catch((error: any) => {
+      console.error('Error displaying book:', error);
+    });
 
     const handleSelection = (e: MouseEvent) => {
-      const contents = rendition.getContents();
+      const contents = rend.getContents();
       contents.forEach((content: Contents) => {
         const selection = content.window.getSelection();
         if (selection && selection.toString().trim()) {
@@ -44,21 +49,23 @@ export default function BookReader({ url, onClose }: BookReaderProps) {
       });
     };
 
-    rendition.on('selected', handleSelection);
+    rend.on('selected', handleSelection);
 
-    const savedLocation = localStorage.getItem(`book-location-${url}`);
+    // Use a hash of the book data for localStorage key
+    const bookId = bookData.byteLength.toString();
+    const savedLocation = localStorage.getItem(`book-location-${bookId}`);
     if (savedLocation) {
-      rendition.display(savedLocation);
+      rend.display(savedLocation);
     }
 
-    rendition.on('relocated', (location: any) => {
-      localStorage.setItem(`book-location-${url}`, location.start.cfi);
+    rend.on('relocated', (location: any) => {
+      localStorage.setItem(`book-location-${bookId}`, location.start.cfi);
     });
 
     return () => {
-      rendition.destroy();
+      rend.destroy();
     };
-  }, [url]);
+  }, [bookData]);
 
   const nextPage = useCallback(() => {
     rendition?.next();

@@ -5,17 +5,17 @@ import { Upload, BookOpen } from 'lucide-react';
 import BookReader from '@/components/BookReader';
 
 export default function Home() {
-  const [bookUrl, setBookUrl] = useState<string | null>(null);
+  const [bookData, setBookData] = useState<ArrayBuffer | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileUpload = useCallback((file: File) => {
+  const handleFileUpload = useCallback(async (file: File) => {
     if (file.type !== 'application/epub+zip' && !file.name.endsWith('.epub')) {
       alert('Please upload an EPUB file');
       return;
     }
 
-    const url = URL.createObjectURL(file);
-    setBookUrl(url);
+    const arrayBuffer = await file.arrayBuffer();
+    setBookData(arrayBuffer);
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -41,8 +41,8 @@ export default function Home() {
     if (file) handleFileUpload(file);
   }, [handleFileUpload]);
 
-  if (bookUrl) {
-    return <BookReader url={bookUrl} onClose={() => setBookUrl(null)} />;
+  if (bookData) {
+    return <BookReader bookData={bookData} onClose={() => setBookData(null)} />;
   }
 
   return (
