@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import ePub from 'epubjs';
 import type { Rendition, Contents } from 'epubjs';
-import { ChevronLeft, ChevronRight, Type, AlignJustify, AArrowUp } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Type, AlignJustify, AArrowUp, Maximize2, Minimize2 } from 'lucide-react';
 import Simplifier from './Simplifier';
 
 export interface BookReaderProps {
@@ -53,6 +53,7 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
   const [showFontMenu, setShowFontMenu] = useState(false);
   const [showLineSpacingMenu, setShowLineSpacingMenu] = useState(false);
   const [showFontSizeMenu, setShowFontSizeMenu] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const selectionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -260,7 +261,27 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
     applyTypographySettings();
   }, [applyTypographySettings]);
 
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      // Enter fullscreen
+      const elem = containerRef.current;
+      if (elem?.requestFullscreen) {
+        elem.requestFullscreen();
+      }
+    } else {
+      // Exit fullscreen
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  }, []);
+
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // Toggle fullscreen with F key
+    if (e.key === 'f' || e.key === 'F') {
+      e.preventDefault();
+      toggleFullscreen();
+    }
     if (e.key === 'ArrowRight') nextPage();
     if (e.key === 'ArrowLeft') prevPage();
     if (e.key === 'Escape') {
@@ -272,12 +293,25 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
         setShowSimplifier(false);
       }
     }
-  }, [nextPage, prevPage, showFontMenu, showLineSpacingMenu, showFontSizeMenu]);
+  }, [nextPage, prevPage, showFontMenu, showLineSpacingMenu, showFontSizeMenu, toggleFullscreen]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
 
   return (
     <div 
@@ -294,8 +328,26 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
           ← Back to Library
         </button>
         
-        {/* Typography Controls */}
+        {/* Typography Controls and Fullscreen */}
         <div className="flex items-center gap-2">
+          {/* Fullscreen Toggle */}
+          <button
+            onClick={toggleFullscreen}
+            className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white/80 backdrop-blur rounded-lg flex items-center gap-2"
+            aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            title="Press F to toggle fullscreen"
+          >
+            {isFullscreen ? (
+              <Minimize2 className="w-4 h-4" />
+            ) : (
+              <Maximize2 className="w-4 h-4" />
+            )}
+            <span className="hidden sm:inline">
+              {isFullscreen ? 'Exit' : 'Fullscreen'}
+            </span>
+          </button>
+
+          <div className="w-px h-6 bg-gray-300/50 hidden sm:block" />
           {/* Font Selector */}
           <div className="relative">
             <button
