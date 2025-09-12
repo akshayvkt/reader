@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { X, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 interface SimplifierProps {
   text: string;
@@ -107,8 +108,16 @@ export default function Simplifier({ text, position, onClose }: SimplifierProps)
             </div>
           </div>
         ) : (
-          <div className="text-gray-700 leading-relaxed overflow-y-auto flex-1 text-[15px] font-light">
-            {simplified || 'Simplifying...'}
+          <div className="text-gray-700 leading-relaxed overflow-y-auto flex-1 text-[15px] font-light prose prose-sm max-w-none">
+            <ReactMarkdown
+              components={{
+                strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                em: ({ children }) => <em className="italic">{children}</em>,
+                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+              }}
+            >
+              {simplified || 'Simplifying...'}
+            </ReactMarkdown>
           </div>
         )}
       </div>

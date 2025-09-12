@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Upload, BookOpen } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import BookReader from '@/components/BookReader';
 
 export default function Home() {
@@ -46,30 +46,18 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-8">
-      <div className="max-w-2xl w-full">
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <BookOpen className="w-16 h-16 text-indigo-600" />
-          </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Simple Reader
-          </h1>
-          <p className="text-lg text-gray-600">
-            Read complex books with AI-powered simplification
-          </p>
-        </div>
-
+    <div className="min-h-screen bg-stone-50 flex items-center justify-center p-8">
+      <div className="w-full max-w-2xl">
         <div
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           className={`
-            relative border-2 border-dashed rounded-xl p-12 text-center
-            transition-all duration-200 ease-in-out
+            relative rounded-3xl p-20 text-center
+            transition-all duration-300 ease-out cursor-pointer
             ${isDragging 
-              ? 'border-indigo-500 bg-indigo-50 scale-105' 
-              : 'border-gray-300 bg-white hover:border-indigo-400 hover:bg-gray-50'
+              ? 'bg-white shadow-2xl scale-[1.02]' 
+              : 'bg-white shadow-md hover:shadow-xl'
             }
           `}
         >
@@ -80,20 +68,28 @@ export default function Home() {
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           />
 
-          <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-          
-          <p className="text-lg font-medium text-gray-700 mb-2">
-            Drop your EPUB file here
-          </p>
-          <p className="text-sm text-gray-500">
-            or click to browse
-          </p>
+          <div className="flex flex-col items-center gap-6">
+            <BookOpen className={`
+              w-12 h-12 transition-all duration-300
+              ${isDragging ? 'text-gray-900 scale-110' : 'text-gray-400'}
+            `} />
+            
+            <div className="text-center">
+              <p className="text-xl text-gray-800 mb-1" style={{ fontFamily: 'var(--font-space-grotesk)' }}>
+                Add your book
+              </p>
+              <p className="text-sm text-gray-400" style={{ fontFamily: 'var(--font-space-grotesk)' }}>
+                EPUB files only
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-600">
-            Select any confusing text while reading to get a simplified explanation
-          </p>
+        {/* Minimal branding */}
+        <div className="mt-12 text-center">
+          <h1 className="text-xs font-medium text-gray-400 tracking-wider uppercase" style={{ fontFamily: 'var(--font-space-grotesk)' }}>
+            Reader
+          </h1>
         </div>
       </div>
     </div>
