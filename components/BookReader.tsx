@@ -126,6 +126,20 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
             clearTimeout(selectionTimerRef.current);
           }
           
+          // Check current selection to determine wait time
+          let waitTime = 1000; // Default for multi-word selections
+          const contents = rend!.getContents();
+          contents.forEach((content: Contents) => {
+            const selection = content.window.getSelection();
+            if (selection && selection.toString().trim()) {
+              const text = selection.toString().trim();
+              // If single word (no spaces), use shorter wait time
+              if (!text.includes(' ')) {
+                waitTime = 200;
+              }
+            }
+          });
+          
           // Set a new timer to wait for selection to stabilize
           selectionTimerRef.current = setTimeout(() => {
             const contents = rend!.getContents();
@@ -138,7 +152,7 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
                 setShowSimplifier(true);
               }
             });
-          }, 1000); // Wait 1 second after last selection event
+          }, waitTime);
         };
 
         rend.on('selected', handleSelection);
