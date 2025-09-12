@@ -50,16 +50,10 @@ export default function Simplifier({ text, position, onClose }: SimplifierProps)
     }
   }, [text]);
 
-  const popupStyle = {
-    left: `${Math.min(position.x, window.innerWidth - 400)}px`,
-    top: `${Math.min(position.y + 20, window.innerHeight - 200)}px`,
-  };
-
   return (
     <div
       ref={popupRef}
-      className="fixed z-50 bg-white rounded-lg shadow-xl border p-4 max-w-md w-96"
-      style={popupStyle}
+      className="fixed right-4 top-1/2 -translate-y-1/2 z-50 bg-white rounded-xl shadow-2xl border p-5 max-w-md w-96 animate-in slide-in-from-right duration-200"
     >
       <div className="flex items-start justify-between mb-3">
         <h3 className="font-semibold text-sm text-gray-700">Selected Text</h3>
