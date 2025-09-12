@@ -76,8 +76,12 @@ export default function Simplifier({ text, position, onClose }: SimplifierProps)
   };
 
   useEffect(() => {
-    // Always use AI for simplification, whether single word or phrase
-    simplifyText();
+    // Debounce API call by 200ms to wait for user to finish selecting
+    const timer = setTimeout(() => {
+      simplifyText();
+    }, 200);
+
+    return () => clearTimeout(timer);
   }, [text]);
 
   return (
