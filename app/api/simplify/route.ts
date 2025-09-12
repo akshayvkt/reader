@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Call Vertex AI API directly
-    const model = 'gemini-2.5-flash'; // Using latest model
+    const model = 'gemini-2.5-flash-lite'; // Using lightweight model for faster responses
     const apiUrl = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`;
 
     const requestBody = {
