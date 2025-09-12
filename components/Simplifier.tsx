@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface SimplifierProps {
@@ -22,8 +22,22 @@ export default function Simplifier({ text, position, onClose }: SimplifierProps)
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    // Use a slight delay to avoid closing immediately on text selection
+    setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+    }, 100);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, [onClose]);
 
   const fetchDictionaryDefinition = async (word: string) => {
@@ -85,17 +99,18 @@ export default function Simplifier({ text, position, onClose }: SimplifierProps)
   }, [text]);
 
   return (
-    <div
-      ref={popupRef}
-      className="fixed right-8 top-1/2 -translate-y-1/2 z-50 bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-6 max-w-md w-96 max-h-[70vh] overflow-hidden flex flex-col animate-in slide-in-from-right duration-200"
-    >
-      <button
+    <>
+      {/* Invisible backdrop for click-to-close */}
+      <div 
+        className="fixed inset-0 z-40" 
         onClick={onClose}
-        className="absolute top-4 right-4 p-1.5 hover:bg-gray-100/80 rounded-full transition-colors"
-        aria-label="Close"
+        aria-hidden="true"
+      />
+      
+      <div
+        ref={popupRef}
+        className="fixed right-8 top-1/2 -translate-y-1/2 z-50 bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-6 max-w-md w-96 max-h-[70vh] overflow-hidden flex flex-col animate-in slide-in-from-right duration-200"
       >
-        <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
-      </button>
 
       {/* Commented out selected text display
       <div className="mb-3 p-3 bg-gray-50 rounded text-sm text-gray-600 max-h-32 overflow-y-auto flex-shrink-0">
@@ -126,5 +141,6 @@ export default function Simplifier({ text, position, onClose }: SimplifierProps)
         )}
       </div>
     </div>
+    </>
   );
 }
