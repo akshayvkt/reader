@@ -53,6 +53,7 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
   const [showFontMenu, setShowFontMenu] = useState(false);
   const [showLineSpacingMenu, setShowLineSpacingMenu] = useState(false);
   const [showFontSizeMenu, setShowFontSizeMenu] = useState(false);
+  const selectionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!viewerRef.current || !bookData) return;
@@ -119,16 +120,25 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
 
         const handleSelection = (e: unknown) => {
           const mouseEvent = e as MouseEvent;
-          const contents = rend!.getContents();
-          contents.forEach((content: Contents) => {
-            const selection = content.window.getSelection();
-            if (selection && selection.toString().trim()) {
-              const text = selection.toString();
-              setSelectedText(text);
-              setSelectionPosition({ x: mouseEvent.clientX, y: mouseEvent.clientY });
-              setShowSimplifier(true);
-            }
-          });
+          
+          // Clear any existing timer
+          if (selectionTimerRef.current) {
+            clearTimeout(selectionTimerRef.current);
+          }
+          
+          // Set a new timer to wait for selection to stabilize
+          selectionTimerRef.current = setTimeout(() => {
+            const contents = rend!.getContents();
+            contents.forEach((content: Contents) => {
+              const selection = content.window.getSelection();
+              if (selection && selection.toString().trim()) {
+                const text = selection.toString();
+                setSelectedText(text);
+                setSelectionPosition({ x: mouseEvent.clientX, y: mouseEvent.clientY });
+                setShowSimplifier(true);
+              }
+            });
+          }, 1000); // Wait 1 second after last selection event
         };
 
         rend.on('selected', handleSelection);
@@ -154,6 +164,9 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
 
     return () => {
       isCleanedUp = true;
+      if (selectionTimerRef.current) {
+        clearTimeout(selectionTimerRef.current);
+      }
       if (rend) {
         try {
           rend.destroy();

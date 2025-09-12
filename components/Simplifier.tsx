@@ -98,10 +98,10 @@ export default function Simplifier({ text, onClose }: SimplifierProps) {
   }, [text]);
 
   useEffect(() => {
-    // Debounce API call by 200ms to wait for user to finish selecting
+    // Small delay to ensure smooth UI transition
     const timer = setTimeout(() => {
       simplifyText();
-    }, 200);
+    }, 100);
 
     return () => clearTimeout(timer);
   }, [text, simplifyText]);
