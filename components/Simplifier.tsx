@@ -80,8 +80,16 @@ export default function Simplifier({ text, onClose }: SimplifierProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
       });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API error:', response.status, errorText);
+        setSimplified('Failed to simplify text. Please try again.');
+        return;
+      }
+      
       const data = await response.json();
-      setSimplified(data.simplified);
+      setSimplified(data.simplified || 'Unable to simplify text');
     } catch (error) {
       console.error('Failed to simplify text:', error);
       setSimplified('Failed to simplify text. Please try again.');

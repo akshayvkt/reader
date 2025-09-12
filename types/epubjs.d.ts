@@ -13,6 +13,7 @@ declare module 'epubjs' {
       navigation: Promise<Navigation>;
       metadata: Promise<Metadata>;
     };
+    package?: unknown;
   }
 
   export interface Rendition {

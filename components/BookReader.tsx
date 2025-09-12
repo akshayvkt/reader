@@ -57,24 +57,37 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
   useEffect(() => {
     if (!viewerRef.current || !bookData) return;
 
-    // Create book from ArrayBuffer with 'binary' option
-    const book = new ePub(bookData, { openAs: 'binary' });
-    const rend = book.renderTo(viewerRef.current, {
-      width: '100%',
-      height: '100%',
-      flow: 'paginated',
-    });
+    let rend: Rendition | null = null;
+    let isCleanedUp = false;
 
-    rend.display().then(() => {
-      console.log('Book displayed successfully');
-      setRendition(rend);
+    const initBook = async () => {
+      try {
+        // Create book from ArrayBuffer with 'binary' option
+        const book = new ePub(bookData, { openAs: 'binary' });
+        
+        // Wait for book to be ready before rendering
+        await book.ready;
+        
+        if (isCleanedUp) return;
+        
+        rend = book.renderTo(viewerRef.current!, {
+          width: '100%',
+          height: '100%',
+          flow: 'paginated',
+        });
+
+        await rend.display();
+        if (isCleanedUp) return;
+        
+        console.log('Book displayed successfully');
+        setRendition(rend);
       
       // Apply saved typography preferences
       const savedFont = localStorage.getItem('reader-font-preference') || FONT_OPTIONS[0].value;
       const savedLineSpacing = localStorage.getItem('reader-line-spacing') || LINE_SPACING_OPTIONS[1].value;
       const savedFontSize = localStorage.getItem('reader-font-size') || FONT_SIZE_OPTIONS[1].value;
       
-      rend.themes.default({
+        rend.themes.default({
         'body': { 
           'font-family': savedFont,
           'line-height': savedLineSpacing,
@@ -99,44 +112,55 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
         'li': {
           'line-height': savedLineSpacing
         }
-      });
-      
-      // Focus the container to ensure keyboard events work
-      containerRef.current?.focus();
-    }).catch((error: unknown) => {
-      console.error('Error displaying book:', error);
-    });
+        });
+        
+        // Focus the container to ensure keyboard events work
+        containerRef.current?.focus();
 
-    const handleSelection = (e: unknown) => {
-      const mouseEvent = e as MouseEvent;
-      const contents = rend.getContents();
-      contents.forEach((content: Contents) => {
-        const selection = content.window.getSelection();
-        if (selection && selection.toString().trim()) {
-          const text = selection.toString();
-          setSelectedText(text);
-          setSelectionPosition({ x: mouseEvent.clientX, y: mouseEvent.clientY });
-          setShowSimplifier(true);
+        const handleSelection = (e: unknown) => {
+          const mouseEvent = e as MouseEvent;
+          const contents = rend!.getContents();
+          contents.forEach((content: Contents) => {
+            const selection = content.window.getSelection();
+            if (selection && selection.toString().trim()) {
+              const text = selection.toString();
+              setSelectedText(text);
+              setSelectionPosition({ x: mouseEvent.clientX, y: mouseEvent.clientY });
+              setShowSimplifier(true);
+            }
+          });
+        };
+
+        rend.on('selected', handleSelection);
+
+        // Use a hash of the book data for localStorage key
+        const bookId = bookData.byteLength.toString();
+        const savedLocation = localStorage.getItem(`book-location-${bookId}`);
+        if (savedLocation && !isCleanedUp) {
+          await rend.display(savedLocation);
         }
-      });
+
+        rend.on('relocated', (location: unknown) => {
+          const loc = location as { start: { cfi: string } };
+          localStorage.setItem(`book-location-${bookId}`, loc.start.cfi);
+        });
+      } catch (error) {
+        console.error('Error initializing book:', error);
+        // Continue to display the book even if there are metadata errors
+      }
     };
 
-    rend.on('selected', handleSelection);
-
-    // Use a hash of the book data for localStorage key
-    const bookId = bookData.byteLength.toString();
-    const savedLocation = localStorage.getItem(`book-location-${bookId}`);
-    if (savedLocation) {
-      rend.display(savedLocation);
-    }
-
-    rend.on('relocated', (location: unknown) => {
-      const loc = location as { start: { cfi: string } };
-      localStorage.setItem(`book-location-${bookId}`, loc.start.cfi);
-    });
+    initBook();
 
     return () => {
-      rend.destroy();
+      isCleanedUp = true;
+      if (rend) {
+        try {
+          rend.destroy();
+        } catch (error) {
+          console.error('Error destroying rendition:', error);
+        }
+      }
     };
   }, [bookData]);
 
