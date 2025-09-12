@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
@@ -54,13 +54,13 @@ export default function Simplifier({ text, position, onClose }: SimplifierProps)
       ).join('; ');
       
       return definitions || 'No definition found';
-    } catch (error) {
+    } catch {
       // Fall back to AI if dictionary fails
       return null;
     }
   };
 
-  const simplifyText = async () => {
+  const simplifyText = useCallback(async () => {
     setLoading(true);
     
     // For single words, try dictionary first
@@ -87,7 +87,7 @@ export default function Simplifier({ text, position, onClose }: SimplifierProps)
       setSimplified('Failed to simplify text. Please try again.');
     }
     setLoading(false);
-  };
+  }, [text]);
 
   useEffect(() => {
     // Debounce API call by 200ms to wait for user to finish selecting
@@ -96,7 +96,7 @@ export default function Simplifier({ text, position, onClose }: SimplifierProps)
     }, 200);
 
     return () => clearTimeout(timer);
-  }, [text]);
+  }, [text, simplifyText]);
 
   return (
     <>
