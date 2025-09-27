@@ -9,8 +9,11 @@ export default function Home() {
   const [isDragging, setIsDragging] = useState(false);
 
   const handleFileUpload = useCallback(async (file: File) => {
-    if (file.type !== 'application/epub+zip' && !file.name.endsWith('.epub')) {
-      alert('Please upload an EPUB file');
+    const isEpub = file.type === 'application/epub+zip' || file.name.endsWith('.epub');
+    const isPdf = file.type === 'application/pdf' || file.name.endsWith('.pdf');
+
+    if (!isEpub && !isPdf) {
+      alert('Please upload an EPUB or PDF file');
       return;
     }
 
@@ -63,7 +66,7 @@ export default function Home() {
         >
           <input
             type="file"
-            accept=".epub,application/epub+zip"
+            accept=".epub,application/epub+zip,.pdf,application/pdf"
             onChange={handleFileSelect}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           />
@@ -79,7 +82,7 @@ export default function Home() {
                 Add your book
               </p>
               <p className="text-sm text-gray-400" style={{ fontFamily: 'var(--font-space-grotesk)' }}>
-                EPUB files only
+                EPUB or PDF files
               </p>
             </div>
           </div>
