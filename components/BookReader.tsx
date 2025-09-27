@@ -37,6 +37,7 @@ const FONT_SIZE_OPTIONS = [
 export default function BookReader({ bookData, onClose }: BookReaderProps) {
   const viewerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const renditionRef = useRef<Rendition | null>(null);
   const [rendition, setRendition] = useState<Rendition | null>(null);
   const [selectedText, setSelectedText] = useState('');
   const [selectionPosition, setSelectionPosition] = useState({ x: 0, y: 0 });
@@ -55,6 +56,11 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
   const [showFontSizeMenu, setShowFontSizeMenu] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const selectionTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Focus container on mount to enable keyboard shortcuts immediately
+  useEffect(() => {
+    containerRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     if (!viewerRef.current || !bookData) return;
@@ -83,6 +89,8 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
         
         console.log('Book displayed successfully');
         setRendition(rend);
+        renditionRef.current = rend;
+
       
       // Apply saved typography preferences
       const savedFont = localStorage.getItem('reader-font-preference') || FONT_OPTIONS[0].value;
@@ -115,9 +123,18 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
           'line-height': savedLineSpacing
         }
         });
-        
-        // Focus the container to ensure keyboard events work
-        containerRef.current?.focus();
+
+        // Focus the container to ensure keyboard events work after book loads
+        // Multiple attempts to ensure focus is set
+        requestAnimationFrame(() => {
+          containerRef.current?.focus();
+        });
+        setTimeout(() => {
+          if (document.activeElement !== containerRef.current) {
+            containerRef.current?.focus();
+            console.log('Focus set on container after book load');
+          }
+        }, 300);
 
         const handleSelection = (e: unknown) => {
           const mouseEvent = e as MouseEvent;
@@ -182,6 +199,7 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
       if (selectionTimerRef.current) {
         clearTimeout(selectionTimerRef.current);
       }
+      renditionRef.current = null;
       if (rend) {
         try {
           rend.destroy();
@@ -193,16 +211,12 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
   }, [bookData]);
 
   const nextPage = useCallback(() => {
-    rendition?.next();
-    // Refocus container to maintain keyboard navigation
-    containerRef.current?.focus();
-  }, [rendition]);
+    renditionRef.current?.next();
+  }, []);
 
   const prevPage = useCallback(() => {
-    rendition?.prev();
-    // Refocus container to maintain keyboard navigation
-    containerRef.current?.focus();
-  }, [rendition]);
+    renditionRef.current?.prev();
+  }, []);
 
   const applyTypographySettings = useCallback(() => {
     if (rendition) {
@@ -277,13 +291,31 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
   }, []);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    // Toggle fullscreen with F key
+    // Skip if user is typing in an input or textarea
+    const target = e.target as HTMLElement;
+    if (target instanceof HTMLInputElement || 
+        target instanceof HTMLTextAreaElement) {
+      return;
+    }
+
+    // Arrow keys
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      renditionRef.current?.next();
+      // Refocus container to maintain keyboard navigation
+      containerRef.current?.focus();
+    }
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      renditionRef.current?.prev();
+      // Refocus container to maintain keyboard navigation
+      containerRef.current?.focus();
+    }
+    // F key for fullscreen
     if (e.key === 'f' || e.key === 'F') {
       e.preventDefault();
       toggleFullscreen();
     }
-    if (e.key === 'ArrowRight') nextPage();
-    if (e.key === 'ArrowLeft') prevPage();
     if (e.key === 'Escape') {
       if (showFontMenu || showLineSpacingMenu || showFontSizeMenu) {
         setShowFontMenu(false);
@@ -293,17 +325,24 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
         setShowSimplifier(false);
       }
     }
-  }, [nextPage, prevPage, showFontMenu, showLineSpacingMenu, showFontSizeMenu, toggleFullscreen]);
+  }, [showFontMenu, showLineSpacingMenu, showFontSizeMenu, toggleFullscreen]);
 
   useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    // Use capture phase (true) to catch events before they reach iframes
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [handleKeyDown]);
 
   // Listen for fullscreen changes
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
+      // Simple focus restoration after exiting fullscreen
+      if (!document.fullscreenElement) {
+        setTimeout(() => {
+          containerRef.current?.focus();
+        }, 100);
+      }
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -318,6 +357,7 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
       ref={containerRef}
       className="fixed inset-0 bg-gray-50 flex flex-col outline-none"
       tabIndex={0}
+      autoFocus
     >
       {/* Minimal header - auto-hides */}
       <header className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 bg-gradient-to-b from-white/90 to-transparent transition-opacity hover:opacity-100 opacity-0">
