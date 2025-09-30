@@ -12,6 +12,11 @@
   margin: 0 auto;
   background: white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  /* Prevent container from being selected */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .pdf-canvas {
@@ -35,6 +40,12 @@
   forced-color-adjust: none;
   transform-origin: 0 0;
   z-index: 2;
+  /* Improve text selection behavior */
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  pointer-events: auto;
 }
 
 .textLayer span,
@@ -44,6 +55,10 @@
   white-space: pre;
   cursor: text;
   transform-origin: 0% 0%;
+  margin: 0;
+  /* Ensure spans are selectable */
+  user-select: text !important;
+  -webkit-user-select: text !important;
 }
 
 /* Text selection highlight */
@@ -55,21 +70,27 @@
   background: rgba(0, 100, 255, 0.3);
 }
 
-/* Hide text layer spans that don't have text */
+/* Custom selection highlight during drag */
+.textLayer span.pdf-text-highlighted {
+  background: rgba(0, 100, 255, 0.3) !important;
+  color: transparent !important;
+}
+
+.textLayer.dragging {
+  cursor: text;
+}
+
+/* Completely disable endOfContent spans to prevent selection issues */
 .textLayer .endOfContent {
-  display: block;
-  position: absolute;
-  left: 0;
-  top: 100%;
-  right: 0;
-  bottom: 0;
-  z-index: -1;
-  cursor: default;
-  user-select: none;
+  display: none !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  visibility: hidden !important;
 }
 
 .textLayer .endOfContent.active {
-  top: 0;
+  display: none !important;
 }
 
 /* Annotation Layer */

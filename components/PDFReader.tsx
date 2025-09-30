@@ -30,6 +30,13 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
   const [showSimplifier, setShowSimplifier] = useState(false);
   const selectionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Custom selection state and refs
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ x: number; y: number; span: HTMLElement | null } | null>(null);
+  const spanCacheRef = useRef<Map<HTMLElement, DOMRect>>(new Map());
+  const highlightedSpansRef = useRef<Set<HTMLElement>>(new Set());
+  const animationFrameRef = useRef<number | null>(null);
+
   // Focus container on mount to enable keyboard shortcuts
   useEffect(() => {
     containerRef.current?.focus();
@@ -114,6 +121,9 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
       // Render the text layer
       await textLayer.render();
 
+      // Cache span positions for custom selection
+      cacheSpanPositions();
+
       // Save page position
       localStorage.setItem(`pdf-page-${bookData.byteLength}`, pageNum.toString());
     } catch (error) {
@@ -165,78 +175,246 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
     }
   }, []);
 
-  // Text selection handling with containment
-  useEffect(() => {
-    const handleSelection = () => {
-      // Clear any existing timer
-      if (selectionTimerRef.current) {
-        clearTimeout(selectionTimerRef.current);
+  // Custom selection helper functions
+  const cacheSpanPositions = useCallback(() => {
+    if (!textLayerRef.current) return;
+
+    spanCacheRef.current.clear();
+    const spans = textLayerRef.current.querySelectorAll('span:not(.endOfContent)');
+
+    spans.forEach((span) => {
+      const htmlSpan = span as HTMLElement;
+      const rect = htmlSpan.getBoundingClientRect();
+      spanCacheRef.current.set(htmlSpan, rect);
+    });
+  }, []);
+
+  const clearHighlights = useCallback(() => {
+    highlightedSpansRef.current.forEach(span => {
+      span.classList.remove('pdf-text-highlighted');
+    });
+    highlightedSpansRef.current.clear();
+  }, []);
+
+  const applyHighlights = useCallback((spans: Set<HTMLElement>) => {
+    spans.forEach(span => {
+      span.classList.add('pdf-text-highlighted');
+    });
+  }, []);
+
+  // Custom selection: Mouse down handler
+  const handleTextMouseDown = useCallback((e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (!target.matches('.textLayer span')) return;
+
+    e.preventDefault();
+
+    // Clear any existing selection
+    window.getSelection()?.removeAllRanges();
+    clearHighlights();
+    setShowSimplifier(false);
+
+    // Start drag tracking
+    setIsDragging(true);
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      span: target as HTMLElement
+    };
+  }, [clearHighlights]);
+
+  // Custom selection: Mouse move handler with geometric filtering
+  const handleTextMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging || !dragStartRef.current || !textLayerRef.current) return;
+
+    // Cancel any pending animation frame
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+
+    // Use requestAnimationFrame for smooth performance
+    animationFrameRef.current = requestAnimationFrame(() => {
+      const startX = dragStartRef.current!.x;
+      const startY = dragStartRef.current!.y;
+      const currentX = e.clientX;
+      const currentY = e.clientY;
+
+      // Calculate drag corridor bounds
+      const minX = Math.min(startX, currentX);
+      const maxX = Math.max(startX, currentX);
+      const minY = Math.min(startY, currentY);
+      const maxY = Math.max(startY, currentY);
+
+      // Find all spans that intersect with drag corridor
+      const validSpans: Array<{element: HTMLElement, rect: DOMRect}> = [];
+
+      spanCacheRef.current.forEach((rect, span) => {
+        // Check if span intersects with drag rectangle
+        const intersects = (
+          rect.left < maxX &&
+          rect.right > minX &&
+          rect.top < maxY &&
+          rect.bottom > minY
+        );
+
+        if (intersects) {
+          validSpans.push({ element: span, rect });
+        }
+      });
+
+      if (validSpans.length === 0) return;
+
+      // Sort spans by visual position (top to bottom, left to right)
+      validSpans.sort((a, b) => {
+        const yDiff = a.rect.top - b.rect.top;
+        if (Math.abs(yDiff) < 5) { // Same line
+          return a.rect.left - b.rect.left;
+        }
+        return yDiff;
+      });
+
+      // Calculate typical line height
+      const heights = validSpans.slice(0, Math.min(3, validSpans.length)).map(sp => sp.rect.height);
+      const lineHeight = Math.max(...heights, 20);
+
+      // Filter out spans that "jumped" to non-contiguous lines
+      const continuousSpans: HTMLElement[] = [];
+
+      for (let i = 0; i < validSpans.length; i++) {
+        const current = validSpans[i];
+
+        if (i === 0) {
+          continuousSpans.push(current.element);
+          continue;
+        }
+
+        const previous = validSpans[i - 1];
+        const verticalGap = current.rect.top - previous.rect.bottom;
+
+        // If gap is too large, stop including spans
+        if (verticalGap > lineHeight * 1.5) {
+          break;
+        }
+
+        continuousSpans.push(current.element);
       }
 
-      // Wait for selection to stabilize
-      selectionTimerRef.current = setTimeout(() => {
-        const selection = window.getSelection();
-        if (selection && selection.toString().trim()) {
-          // Check if selection is within text layer
-          if (selection.anchorNode && textLayerRef.current &&
-              !textLayerRef.current.contains(selection.anchorNode)) {
-            // Selection is outside text layer, clear it
-            selection.removeAllRanges();
-            return;
-          }
+      // Update highlights
+      clearHighlights();
+      const newHighlightedSpans = new Set(continuousSpans);
+      highlightedSpansRef.current = newHighlightedSpans;
+      applyHighlights(newHighlightedSpans);
+    });
+  }, [isDragging, clearHighlights, applyHighlights]);
 
-          const text = selection.toString();
-          const range = selection.getRangeAt(0);
-          const rect = range.getBoundingClientRect();
+  // Custom selection: Mouse up handler to finalize selection
+  const handleTextMouseUp = useCallback((e: MouseEvent) => {
+    if (!isDragging) return;
 
-          setSelectedText(text);
-          setSelectionPosition({
-            x: rect.left + rect.width / 2,
-            y: rect.top
-          });
-          setShowSimplifier(true);
+    setIsDragging(false);
+
+    // Cancel any pending animation frame
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+
+    if (highlightedSpansRef.current.size === 0) {
+      dragStartRef.current = null;
+      return;
+    }
+
+    // Build selection from highlighted spans
+    const spans = Array.from(highlightedSpansRef.current);
+
+    // Sort by visual position
+    const sortedSpans = spans.map(span => ({
+      element: span,
+      rect: span.getBoundingClientRect()
+    })).sort((a, b) => {
+      const yDiff = a.rect.top - b.rect.top;
+      if (Math.abs(yDiff) < 5) {
+        return a.rect.left - b.rect.left;
+      }
+      return yDiff;
+    }).map(item => item.element);
+
+    if (sortedSpans.length > 0) {
+      try {
+        // Create range from first to last span
+        const range = document.createRange();
+        const firstSpan = sortedSpans[0];
+        const lastSpan = sortedSpans[sortedSpans.length - 1];
+
+        // Set range boundaries
+        if (firstSpan.firstChild) {
+          range.setStartBefore(firstSpan.firstChild);
+        } else {
+          range.setStartBefore(firstSpan);
         }
-      }, 500);
-    };
 
-    // Prevent selection jumping when clicking empty space
-    const handleMouseDown = (e: MouseEvent) => {
-      // If clicking directly on text layer container (not on text spans)
-      if (e.target === textLayerRef.current) {
-        e.preventDefault();
-        // Clear any existing selection
+        if (lastSpan.lastChild) {
+          range.setEndAfter(lastSpan.lastChild);
+        } else {
+          range.setEndAfter(lastSpan);
+        }
+
+        // Apply selection
         const selection = window.getSelection();
         if (selection) {
           selection.removeAllRanges();
-        }
-      }
-    };
+          selection.addRange(range);
 
-    // Add containment check on selection
-    const handleSelectionChange = () => {
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        // Ensure selection stays within text layer bounds
-        const range = selection.getRangeAt(0);
-        if (textLayerRef.current &&
-            !textLayerRef.current.contains(range.commonAncestorContainer)) {
-          selection.removeAllRanges();
+          // Extract text and show simplifier
+          const text = selection.toString().trim();
+          if (text) {
+            const rect = range.getBoundingClientRect();
+            setSelectedText(text);
+            setSelectionPosition({
+              x: rect.left + rect.width / 2,
+              y: rect.top
+            });
+            setShowSimplifier(true);
+          }
         }
+      } catch (error) {
+        console.error('Error creating selection:', error);
       }
-      handleSelection();
-    };
+    }
 
-    document.addEventListener('selectionchange', handleSelectionChange);
-    textLayerRef.current?.addEventListener('mousedown', handleMouseDown);
+    // Clear highlights after selection is made
+    clearHighlights();
+    dragStartRef.current = null;
+  }, [isDragging, clearHighlights]);
+
+  // Custom text selection with geometry-based mouse tracking
+  useEffect(() => {
+    const textLayer = textLayerRef.current;
+    if (!textLayer) return;
+
+    // Attach mouse event listeners
+    textLayer.addEventListener('mousedown', handleTextMouseDown as EventListener);
+    document.addEventListener('mousemove', handleTextMouseMove as EventListener);
+    document.addEventListener('mouseup', handleTextMouseUp as EventListener);
+
+    // Apply dragging class when dragging
+    if (isDragging) {
+      textLayer.classList.add('dragging');
+    } else {
+      textLayer.classList.remove('dragging');
+    }
 
     return () => {
-      document.removeEventListener('selectionchange', handleSelectionChange);
-      textLayerRef.current?.removeEventListener('mousedown', handleMouseDown);
-      if (selectionTimerRef.current) {
-        clearTimeout(selectionTimerRef.current);
+      textLayer.removeEventListener('mousedown', handleTextMouseDown as EventListener);
+      document.removeEventListener('mousemove', handleTextMouseMove as EventListener);
+      document.removeEventListener('mouseup', handleTextMouseUp as EventListener);
+
+      // Cleanup animation frame on unmount
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, []);
+  }, [handleTextMouseDown, handleTextMouseMove, handleTextMouseUp, isDragging]);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
