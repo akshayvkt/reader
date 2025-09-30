@@ -28,7 +28,6 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
   const [selectedText, setSelectedText] = useState('');
   const [selectionPosition, setSelectionPosition] = useState({ x: 0, y: 0 });
   const [showSimplifier, setShowSimplifier] = useState(false);
-  const selectionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Custom selection state and refs
   const [isDragging, setIsDragging] = useState(false);
@@ -181,7 +180,9 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
       return document.caretPositionFromPoint(x, y);
     }
     // Chrome/Safari fallback
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     else if ((document as any).caretRangeFromPoint) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const range = (document as any).caretRangeFromPoint(x, y);
       if (range) {
         return {
@@ -294,7 +295,7 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
         selection.removeAllRanges();
         selection.addRange(range);
       }
-    } catch (error) {
+    } catch {
       // Silently ignore errors (can happen at document boundaries)
     }
   }, [isDragging, getCaretPosition]);
