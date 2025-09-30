@@ -245,22 +245,82 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
       const minY = Math.min(startY, currentY);
       const maxY = Math.max(startY, currentY);
 
-      // Find all spans that intersect with drag corridor
-      const validSpans: Array<{element: HTMLElement, rect: DOMRect}> = [];
+      // Debug logging
+      console.log('=== DRAG DEBUG ===');
+      console.log('Start:', { x: startX, y: startY });
+      console.log('Current:', { x: currentX, y: currentY });
+      console.log('Bounds:', { minX, maxX, minY, maxY });
+      console.log('Drag distance:', { horizontal: maxX - minX, vertical: maxY - minY });
+
+      // Determine drag direction for horizontal filtering
+      const isDraggingRight = currentX >= startX;
+
+      // Find all spans that intersect with drag corridor (with horizontal precision)
+      const validSpans: Array<{element: HTMLElement, rect: DOMRect, centerX: number, centerY: number}> = [];
 
       spanCacheRef.current.forEach((rect, span) => {
-        // Check if span intersects with drag rectangle
-        const intersects = (
-          rect.left < maxX &&
-          rect.right > minX &&
-          rect.top < maxY &&
-          rect.bottom > minY
-        );
+        // Calculate span center point for line detection
+        const centerY = rect.top + rect.height / 2;
 
-        if (intersects) {
-          validSpans.push({ element: span, rect });
+        // Check if span rectangle intersects with drag range vertically (proper rectangle intersection)
+        const intersectsVertically = rect.bottom > minY && rect.top < maxY;
+        if (!intersectsVertically) return;
+
+        // Determine which line this span is on relative to drag (tighter threshold for accuracy)
+        const lineHeight = rect.height;
+        const onStartLine = Math.abs(centerY - startY) < lineHeight * 0.6;
+        const onEndLine = Math.abs(centerY - currentY) < lineHeight * 0.6;
+        const onMiddleLine = !onStartLine && !onEndLine;
+
+        // Apply horizontal filtering based on which line the span is on
+        let includeSpan = false;
+
+        if (onStartLine && onEndLine) {
+          // Same line: use rectangle intersection for precise word-level selection
+          includeSpan = rect.right > minX && rect.left < maxX;
+        } else if (onStartLine) {
+          // Start line: include spans from start position onwards
+          includeSpan = isDraggingRight ? rect.left <= maxX : rect.right >= minX;
+        } else if (onEndLine) {
+          // End line: include spans up to end position
+          includeSpan = isDraggingRight ? rect.left <= maxX : rect.right >= minX;
+        } else if (onMiddleLine) {
+          // Middle line: include all spans on this line
+          includeSpan = true;
+        }
+
+        // Debug logging for each span
+        console.log('Span:', {
+          text: span.textContent?.substring(0, 30) + '...',
+          rect: {
+            left: Math.round(rect.left),
+            right: Math.round(rect.right),
+            top: Math.round(rect.top),
+            bottom: Math.round(rect.bottom),
+            width: Math.round(rect.width)
+          },
+          centerY: Math.round(centerY),
+          lineHeight: Math.round(lineHeight),
+          checks: {
+            intersectsVertically,
+            onStartLine,
+            onEndLine,
+            onMiddleLine
+          },
+          includeSpan
+        });
+
+        if (includeSpan) {
+          const centerX = rect.left + rect.width / 2;
+          validSpans.push({ element: span, rect, centerX, centerY });
         }
       });
+
+      // Debug: Summary of selected spans
+      console.log('=== SELECTION SUMMARY ===');
+      console.log('Total valid spans:', validSpans.length);
+      console.log('Span texts:', validSpans.map(s => s.element.textContent?.substring(0, 20) + '...'));
+      console.log('=======================');
 
       if (validSpans.length === 0) return;
 
@@ -277,7 +337,7 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
       const heights = validSpans.slice(0, Math.min(3, validSpans.length)).map(sp => sp.rect.height);
       const lineHeight = Math.max(...heights, 20);
 
-      // Filter out spans that "jumped" to non-contiguous lines
+      // Filter out spans that "jumped" to non-contiguous lines (vertical continuity check)
       const continuousSpans: HTMLElement[] = [];
 
       for (let i = 0; i < validSpans.length; i++) {
