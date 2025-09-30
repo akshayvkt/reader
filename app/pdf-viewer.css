@@ -70,16 +70,6 @@
   background: rgba(0, 100, 255, 0.3);
 }
 
-/* Custom selection highlight during drag */
-.textLayer span.pdf-text-highlighted {
-  background: rgba(0, 100, 255, 0.3) !important;
-  color: transparent !important;
-}
-
-.textLayer.dragging {
-  cursor: text;
-}
-
 /* Completely disable endOfContent spans to prevent selection issues */
 .textLayer .endOfContent {
   display: none !important;

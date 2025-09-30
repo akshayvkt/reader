@@ -32,10 +32,12 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
 
   // Custom selection state and refs
   const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef<{ x: number; y: number; span: HTMLElement | null } | null>(null);
-  const spanCacheRef = useRef<Map<HTMLElement, DOMRect>>(new Map());
-  const highlightedSpansRef = useRef<Set<HTMLElement>>(new Set());
-  const animationFrameRef = useRef<number | null>(null);
+  const dragStartRef = useRef<{
+    x: number;
+    y: number;
+    offsetNode: Node;
+    offset: number
+  } | null>(null);
 
   // Focus container on mount to enable keyboard shortcuts
   useEffect(() => {
@@ -121,9 +123,6 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
       // Render the text layer
       await textLayer.render();
 
-      // Cache span positions for custom selection
-      cacheSpanPositions();
-
       // Save page position
       localStorage.setItem(`pdf-page-${bookData.byteLength}`, pageNum.toString());
     } catch (error) {
@@ -175,306 +174,143 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
     }
   }, []);
 
-  // Custom selection helper functions
-  const cacheSpanPositions = useCallback(() => {
-    if (!textLayerRef.current) return;
-
-    spanCacheRef.current.clear();
-    const spans = textLayerRef.current.querySelectorAll('span:not(.endOfContent)');
-
-    spans.forEach((span) => {
-      const htmlSpan = span as HTMLElement;
-      const rect = htmlSpan.getBoundingClientRect();
-      spanCacheRef.current.set(htmlSpan, rect);
-    });
+  // Browser-native character-level selection using caretPositionFromPoint API
+  const getCaretPosition = useCallback((x: number, y: number) => {
+    // Firefox/modern browsers
+    if (document.caretPositionFromPoint) {
+      return document.caretPositionFromPoint(x, y);
+    }
+    // Chrome/Safari fallback
+    else if ((document as any).caretRangeFromPoint) {
+      const range = (document as any).caretRangeFromPoint(x, y);
+      if (range) {
+        return {
+          offsetNode: range.startContainer,
+          offset: range.startOffset
+        };
+      }
+    }
+    return null;
   }, []);
 
-  const clearHighlights = useCallback(() => {
-    highlightedSpansRef.current.forEach(span => {
-      span.classList.remove('pdf-text-highlighted');
-    });
-    highlightedSpansRef.current.clear();
-  }, []);
-
-  const applyHighlights = useCallback((spans: Set<HTMLElement>) => {
-    spans.forEach(span => {
-      span.classList.add('pdf-text-highlighted');
-    });
-  }, []);
-
-  // Custom selection: Mouse down handler
+  // Mouse down handler - get precise character position at click
   const handleTextMouseDown = useCallback((e: MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (!target.matches('.textLayer span')) return;
 
-    e.preventDefault();
+    // Only handle clicks on text layer or its children
+    if (!textLayerRef.current?.contains(target)) return;
 
     // Clear any existing selection
     window.getSelection()?.removeAllRanges();
-    clearHighlights();
     setShowSimplifier(false);
+
+    // Get precise caret position at mouse coordinates
+    const caretPos = getCaretPosition(e.clientX, e.clientY);
+
+    if (!caretPos || !caretPos.offsetNode) return;
 
     // Start drag tracking
     setIsDragging(true);
     dragStartRef.current = {
       x: e.clientX,
       y: e.clientY,
-      span: target as HTMLElement
+      offsetNode: caretPos.offsetNode,
+      offset: caretPos.offset
     };
-  }, [clearHighlights]);
+  }, [getCaretPosition]);
 
-  // Custom selection: Mouse move handler with geometric filtering
-  const handleTextMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging || !dragStartRef.current || !textLayerRef.current) return;
-
-    // Cancel any pending animation frame
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-
-    // Use requestAnimationFrame for smooth performance
-    animationFrameRef.current = requestAnimationFrame(() => {
-      const startX = dragStartRef.current!.x;
-      const startY = dragStartRef.current!.y;
-      const currentX = e.clientX;
-      const currentY = e.clientY;
-
-      // Calculate drag corridor bounds
-      const minX = Math.min(startX, currentX);
-      const maxX = Math.max(startX, currentX);
-      const minY = Math.min(startY, currentY);
-      const maxY = Math.max(startY, currentY);
-
-      // Debug logging
-      console.log('=== DRAG DEBUG ===');
-      console.log('Start:', { x: startX, y: startY });
-      console.log('Current:', { x: currentX, y: currentY });
-      console.log('Bounds:', { minX, maxX, minY, maxY });
-      console.log('Drag distance:', { horizontal: maxX - minX, vertical: maxY - minY });
-
-      // Determine drag direction for horizontal filtering
-      const isDraggingRight = currentX >= startX;
-
-      // Find all spans that intersect with drag corridor (with horizontal precision)
-      const validSpans: Array<{element: HTMLElement, rect: DOMRect, centerX: number, centerY: number}> = [];
-
-      spanCacheRef.current.forEach((rect, span) => {
-        // Calculate span center point for line detection
-        const centerY = rect.top + rect.height / 2;
-
-        // Check if span rectangle intersects with drag range vertically (proper rectangle intersection)
-        const intersectsVertically = rect.bottom > minY && rect.top < maxY;
-        if (!intersectsVertically) return;
-
-        // Determine which line this span is on relative to drag (tighter threshold for accuracy)
-        const lineHeight = rect.height;
-        const onStartLine = Math.abs(centerY - startY) < lineHeight * 0.6;
-        const onEndLine = Math.abs(centerY - currentY) < lineHeight * 0.6;
-        const onMiddleLine = !onStartLine && !onEndLine;
-
-        // Apply horizontal filtering based on which line the span is on
-        let includeSpan = false;
-
-        if (onStartLine && onEndLine) {
-          // Same line: use rectangle intersection for precise word-level selection
-          includeSpan = rect.right > minX && rect.left < maxX;
-        } else if (onStartLine) {
-          // Start line: include spans from start position onwards
-          includeSpan = isDraggingRight ? rect.left <= maxX : rect.right >= minX;
-        } else if (onEndLine) {
-          // End line: include spans up to end position
-          includeSpan = isDraggingRight ? rect.left <= maxX : rect.right >= minX;
-        } else if (onMiddleLine) {
-          // Middle line: include all spans on this line
-          includeSpan = true;
-        }
-
-        // Debug logging for each span
-        console.log('Span:', {
-          text: span.textContent?.substring(0, 30) + '...',
-          rect: {
-            left: Math.round(rect.left),
-            right: Math.round(rect.right),
-            top: Math.round(rect.top),
-            bottom: Math.round(rect.bottom),
-            width: Math.round(rect.width)
-          },
-          centerY: Math.round(centerY),
-          lineHeight: Math.round(lineHeight),
-          checks: {
-            intersectsVertically,
-            onStartLine,
-            onEndLine,
-            onMiddleLine
-          },
-          includeSpan
-        });
-
-        if (includeSpan) {
-          const centerX = rect.left + rect.width / 2;
-          validSpans.push({ element: span, rect, centerX, centerY });
-        }
-      });
-
-      // Debug: Summary of selected spans
-      console.log('=== SELECTION SUMMARY ===');
-      console.log('Total valid spans:', validSpans.length);
-      console.log('Span texts:', validSpans.map(s => s.element.textContent?.substring(0, 20) + '...'));
-      console.log('=======================');
-
-      if (validSpans.length === 0) return;
-
-      // Sort spans by visual position (top to bottom, left to right)
-      validSpans.sort((a, b) => {
-        const yDiff = a.rect.top - b.rect.top;
-        if (Math.abs(yDiff) < 5) { // Same line
-          return a.rect.left - b.rect.left;
-        }
-        return yDiff;
-      });
-
-      // Calculate typical line height
-      const heights = validSpans.slice(0, Math.min(3, validSpans.length)).map(sp => sp.rect.height);
-      const lineHeight = Math.max(...heights, 20);
-
-      // Filter out spans that "jumped" to non-contiguous lines (vertical continuity check)
-      const continuousSpans: HTMLElement[] = [];
-
-      for (let i = 0; i < validSpans.length; i++) {
-        const current = validSpans[i];
-
-        if (i === 0) {
-          continuousSpans.push(current.element);
-          continue;
-        }
-
-        const previous = validSpans[i - 1];
-        const verticalGap = current.rect.top - previous.rect.bottom;
-
-        // If gap is too large, stop including spans
-        if (verticalGap > lineHeight * 1.5) {
-          break;
-        }
-
-        continuousSpans.push(current.element);
-      }
-
-      // Update highlights
-      clearHighlights();
-      const newHighlightedSpans = new Set(continuousSpans);
-      highlightedSpansRef.current = newHighlightedSpans;
-      applyHighlights(newHighlightedSpans);
-    });
-  }, [isDragging, clearHighlights, applyHighlights]);
-
-  // Custom selection: Mouse up handler to finalize selection
+  // Mouse up handler - create precise selection from character positions
   const handleTextMouseUp = useCallback((e: MouseEvent) => {
-    if (!isDragging) return;
+    if (!isDragging || !dragStartRef.current) return;
 
     setIsDragging(false);
 
-    // Cancel any pending animation frame
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
+    // Get precise caret position at mouseup coordinates
+    const endCaretPos = getCaretPosition(e.clientX, e.clientY);
 
-    if (highlightedSpansRef.current.size === 0) {
+    if (!endCaretPos || !endCaretPos.offsetNode) {
       dragStartRef.current = null;
       return;
     }
 
-    // Build selection from highlighted spans
-    const spans = Array.from(highlightedSpansRef.current);
+    const startNode = dragStartRef.current.offsetNode;
+    const startOffset = dragStartRef.current.offset;
+    const endNode = endCaretPos.offsetNode;
+    const endOffset = endCaretPos.offset;
 
-    // Sort by visual position
-    const sortedSpans = spans.map(span => ({
-      element: span,
-      rect: span.getBoundingClientRect()
-    })).sort((a, b) => {
-      const yDiff = a.rect.top - b.rect.top;
-      if (Math.abs(yDiff) < 5) {
-        return a.rect.left - b.rect.left;
-      }
-      return yDiff;
-    }).map(item => item.element);
+    try {
+      // Create range with character-level precision
+      const range = document.createRange();
 
-    if (sortedSpans.length > 0) {
-      try {
-        // Create range from first to last span
-        const range = document.createRange();
-        const firstSpan = sortedSpans[0];
-        const lastSpan = sortedSpans[sortedSpans.length - 1];
+      // Handle potential backwards selection
+      const position = startNode.compareDocumentPosition(endNode);
 
-        // Set range boundaries
-        if (firstSpan.firstChild) {
-          range.setStartBefore(firstSpan.firstChild);
+      if (position === 0) {
+        // Same node - compare offsets
+        if (startOffset <= endOffset) {
+          range.setStart(startNode, startOffset);
+          range.setEnd(endNode, endOffset);
         } else {
-          range.setStartBefore(firstSpan);
+          range.setStart(endNode, endOffset);
+          range.setEnd(startNode, startOffset);
         }
-
-        if (lastSpan.lastChild) {
-          range.setEndAfter(lastSpan.lastChild);
-        } else {
-          range.setEndAfter(lastSpan);
-        }
-
-        // Apply selection
-        const selection = window.getSelection();
-        if (selection) {
-          selection.removeAllRanges();
-          selection.addRange(range);
-
-          // Extract text and show simplifier
-          const text = selection.toString().trim();
-          if (text) {
-            const rect = range.getBoundingClientRect();
-            setSelectedText(text);
-            setSelectionPosition({
-              x: rect.left + rect.width / 2,
-              y: rect.top
-            });
-            setShowSimplifier(true);
-          }
-        }
-      } catch (error) {
-        console.error('Error creating selection:', error);
+      } else if (position & Node.DOCUMENT_POSITION_FOLLOWING) {
+        // endNode comes after startNode (normal forward selection)
+        range.setStart(startNode, startOffset);
+        range.setEnd(endNode, endOffset);
+      } else {
+        // endNode comes before startNode (backwards selection)
+        range.setStart(endNode, endOffset);
+        range.setEnd(startNode, startOffset);
       }
+
+      // Apply the precise selection
+      const selection = window.getSelection();
+      if (selection && !range.collapsed) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        // Extract text and show simplifier
+        const text = selection.toString().trim();
+        if (text) {
+          const rect = range.getBoundingClientRect();
+          setSelectedText(text);
+          setSelectionPosition({
+            x: rect.left + rect.width / 2,
+            y: rect.top
+          });
+          setShowSimplifier(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error creating selection range:', error);
     }
 
-    // Clear highlights after selection is made
-    clearHighlights();
     dragStartRef.current = null;
-  }, [isDragging, clearHighlights]);
+  }, [isDragging, getCaretPosition]);
 
-  // Custom text selection with geometry-based mouse tracking
+  // Browser-native text selection event listeners
   useEffect(() => {
     const textLayer = textLayerRef.current;
     if (!textLayer) return;
 
-    // Attach mouse event listeners
-    textLayer.addEventListener('mousedown', handleTextMouseDown as EventListener);
-    document.addEventListener('mousemove', handleTextMouseMove as EventListener);
-    document.addEventListener('mouseup', handleTextMouseUp as EventListener);
+    // Prevent default text selection behavior during drag
+    const preventDefaultSelection = (e: Event) => {
+      if (isDragging) {
+        e.preventDefault();
+      }
+    };
 
-    // Apply dragging class when dragging
-    if (isDragging) {
-      textLayer.classList.add('dragging');
-    } else {
-      textLayer.classList.remove('dragging');
-    }
+    textLayer.addEventListener('mousedown', handleTextMouseDown as EventListener);
+    document.addEventListener('mouseup', handleTextMouseUp as EventListener);
+    document.addEventListener('selectstart', preventDefaultSelection);
 
     return () => {
       textLayer.removeEventListener('mousedown', handleTextMouseDown as EventListener);
-      document.removeEventListener('mousemove', handleTextMouseMove as EventListener);
       document.removeEventListener('mouseup', handleTextMouseUp as EventListener);
-
-      // Cleanup animation frame on unmount
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
+      document.removeEventListener('selectstart', preventDefaultSelection);
     };
-  }, [handleTextMouseDown, handleTextMouseMove, handleTextMouseUp, isDragging]);
+  }, [handleTextMouseDown, handleTextMouseUp, isDragging]);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
