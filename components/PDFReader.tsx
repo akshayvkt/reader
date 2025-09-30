@@ -193,12 +193,42 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
     return null;
   }, []);
 
+  // Double-click handler - let browser select word, then show popup
+  const handleTextDoubleClick = useCallback((e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+
+    // Only handle clicks on text layer or its children
+    if (!textLayerRef.current?.contains(target)) return;
+
+    // Let browser handle word selection, then capture it
+    setTimeout(() => {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return;
+
+      const range = selection.getRangeAt(0);
+      const text = selection.toString().trim();
+
+      if (text) {
+        const rect = range.getBoundingClientRect();
+        setSelectedText(text);
+        setSelectionPosition({
+          x: rect.left + rect.width / 2,
+          y: rect.top
+        });
+        setShowSimplifier(true);
+      }
+    }, 10);
+  }, []);
+
   // Mouse down handler - get precise character position at click
   const handleTextMouseDown = useCallback((e: MouseEvent) => {
     const target = e.target as HTMLElement;
 
     // Only handle clicks on text layer or its children
     if (!textLayerRef.current?.contains(target)) return;
+
+    // Don't interfere with double-clicks
+    if (e.detail === 2) return;
 
     // Clear any existing selection
     window.getSelection()?.removeAllRanges();
@@ -351,18 +381,20 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
       }
     };
 
+    textLayer.addEventListener('dblclick', handleTextDoubleClick as EventListener);
     textLayer.addEventListener('mousedown', handleTextMouseDown as EventListener);
     document.addEventListener('mousemove', handleTextMouseMove as EventListener);
     document.addEventListener('mouseup', handleTextMouseUp as EventListener);
     document.addEventListener('selectstart', preventDefaultSelection);
 
     return () => {
+      textLayer.removeEventListener('dblclick', handleTextDoubleClick as EventListener);
       textLayer.removeEventListener('mousedown', handleTextMouseDown as EventListener);
       document.removeEventListener('mousemove', handleTextMouseMove as EventListener);
       document.removeEventListener('mouseup', handleTextMouseUp as EventListener);
       document.removeEventListener('selectstart', preventDefaultSelection);
     };
-  }, [handleTextMouseDown, handleTextMouseMove, handleTextMouseUp, isDragging]);
+  }, [handleTextDoubleClick, handleTextMouseDown, handleTextMouseMove, handleTextMouseUp, isDragging]);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
