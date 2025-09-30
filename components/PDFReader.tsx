@@ -219,6 +219,56 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
     };
   }, [getCaretPosition]);
 
+  // Mouse move handler - show selection in real-time as user drags
+  const handleTextMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging || !dragStartRef.current) return;
+
+    // Get current caret position
+    const endCaretPos = getCaretPosition(e.clientX, e.clientY);
+    if (!endCaretPos || !endCaretPos.offsetNode) return;
+
+    const startNode = dragStartRef.current.offsetNode;
+    const startOffset = dragStartRef.current.offset;
+    const endNode = endCaretPos.offsetNode;
+    const endOffset = endCaretPos.offset;
+
+    try {
+      // Create range for visual feedback
+      const range = document.createRange();
+
+      // Handle potential backwards selection
+      const position = startNode.compareDocumentPosition(endNode);
+
+      if (position === 0) {
+        // Same node - compare offsets
+        if (startOffset <= endOffset) {
+          range.setStart(startNode, startOffset);
+          range.setEnd(endNode, endOffset);
+        } else {
+          range.setStart(endNode, endOffset);
+          range.setEnd(startNode, startOffset);
+        }
+      } else if (position & Node.DOCUMENT_POSITION_FOLLOWING) {
+        // endNode comes after startNode (normal forward selection)
+        range.setStart(startNode, startOffset);
+        range.setEnd(endNode, endOffset);
+      } else {
+        // endNode comes before startNode (backwards selection)
+        range.setStart(endNode, endOffset);
+        range.setEnd(startNode, startOffset);
+      }
+
+      // Apply selection for real-time visual feedback
+      const selection = window.getSelection();
+      if (selection && !range.collapsed) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    } catch (error) {
+      // Silently ignore errors (can happen at document boundaries)
+    }
+  }, [isDragging, getCaretPosition]);
+
   // Mouse up handler - create precise selection from character positions
   const handleTextMouseUp = useCallback((e: MouseEvent) => {
     if (!isDragging || !dragStartRef.current) return;
@@ -302,15 +352,17 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
     };
 
     textLayer.addEventListener('mousedown', handleTextMouseDown as EventListener);
+    document.addEventListener('mousemove', handleTextMouseMove as EventListener);
     document.addEventListener('mouseup', handleTextMouseUp as EventListener);
     document.addEventListener('selectstart', preventDefaultSelection);
 
     return () => {
       textLayer.removeEventListener('mousedown', handleTextMouseDown as EventListener);
+      document.removeEventListener('mousemove', handleTextMouseMove as EventListener);
       document.removeEventListener('mouseup', handleTextMouseUp as EventListener);
       document.removeEventListener('selectstart', preventDefaultSelection);
     };
-  }, [handleTextMouseDown, handleTextMouseUp, isDragging]);
+  }, [handleTextMouseDown, handleTextMouseMove, handleTextMouseUp, isDragging]);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
