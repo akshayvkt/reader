@@ -65,37 +65,50 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
 
     try {
       const page = await pdf.getPage(pageNum);
-      const viewport = page.getViewport({ scale });
 
-      // Set canvas dimensions
+      // Get device pixel ratio for high-DPI displays (Retina, etc.)
+      const dpr = window.devicePixelRatio || 1;
+
+      // Create high-resolution viewport for canvas rendering
+      const canvasViewport = page.getViewport({ scale: scale * dpr });
+
+      // Create separate viewport for text layer (at logical pixel size)
+      const textLayerViewport = page.getViewport({ scale });
+
+      // Set canvas dimensions to full pixel resolution
       const canvas = canvasRef.current;
       const context = canvas.getContext('2d');
       if (!context) return;
 
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
+      canvas.width = canvasViewport.width;
+      canvas.height = canvasViewport.height;
 
-      // Render PDF page
+      // Scale canvas back to logical size with CSS
+      canvas.style.width = `${canvasViewport.width / dpr}px`;
+      canvas.style.height = `${canvasViewport.height / dpr}px`;
+
+      // Render PDF page at high resolution
       const renderContext = {
         canvasContext: context,
-        viewport: viewport,
+        viewport: canvasViewport,
       };
       await page.render(renderContext).promise;
 
       // Clear previous text layer
       textLayerRef.current.innerHTML = '';
-      textLayerRef.current.style.width = `${viewport.width}px`;
-      textLayerRef.current.style.height = `${viewport.height}px`;
+      // Text layer uses logical pixel dimensions to align with visual canvas size
+      textLayerRef.current.style.width = `${textLayerViewport.width}px`;
+      textLayerRef.current.style.height = `${textLayerViewport.height}px`;
 
       // Render text layer for selection
       const textContent = await page.getTextContent();
       const textLayerDiv = textLayerRef.current;
 
-      // Create text layer using the new TextLayer class
+      // Create text layer using logical viewport
       const textLayer = new TextLayer({
         textContentSource: textContent,
         container: textLayerDiv,
-        viewport: viewport,
+        viewport: textLayerViewport,
       });
 
       // Render the text layer
@@ -152,7 +165,7 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
     }
   }, []);
 
-  // Text selection handling
+  // Text selection handling with containment
   useEffect(() => {
     const handleSelection = () => {
       // Clear any existing timer
@@ -164,6 +177,14 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
       selectionTimerRef.current = setTimeout(() => {
         const selection = window.getSelection();
         if (selection && selection.toString().trim()) {
+          // Check if selection is within text layer
+          if (selection.anchorNode && textLayerRef.current &&
+              !textLayerRef.current.contains(selection.anchorNode)) {
+            // Selection is outside text layer, clear it
+            selection.removeAllRanges();
+            return;
+          }
+
           const text = selection.toString();
           const range = selection.getRangeAt(0);
           const rect = range.getBoundingClientRect();
@@ -178,10 +199,39 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
       }, 500);
     };
 
-    document.addEventListener('selectionchange', handleSelection);
+    // Prevent selection jumping when clicking empty space
+    const handleMouseDown = (e: MouseEvent) => {
+      // If clicking directly on text layer container (not on text spans)
+      if (e.target === textLayerRef.current) {
+        e.preventDefault();
+        // Clear any existing selection
+        const selection = window.getSelection();
+        if (selection) {
+          selection.removeAllRanges();
+        }
+      }
+    };
+
+    // Add containment check on selection
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        // Ensure selection stays within text layer bounds
+        const range = selection.getRangeAt(0);
+        if (textLayerRef.current &&
+            !textLayerRef.current.contains(range.commonAncestorContainer)) {
+          selection.removeAllRanges();
+        }
+      }
+      handleSelection();
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    textLayerRef.current?.addEventListener('mousedown', handleMouseDown);
 
     return () => {
-      document.removeEventListener('selectionchange', handleSelection);
+      document.removeEventListener('selectionchange', handleSelectionChange);
+      textLayerRef.current?.removeEventListener('mousedown', handleMouseDown);
       if (selectionTimerRef.current) {
         clearTimeout(selectionTimerRef.current);
       }
