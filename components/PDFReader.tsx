@@ -510,7 +510,7 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
           <button
             onClick={prevPage}
             disabled={currentPage <= 1}
-            className="p-2 rounded-full bg-white/90 hover:bg-white shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded-full bg-white/90 hover:bg-white hover:scale-105 active:scale-95 active:bg-gray-100 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             aria-label="Previous page"
           >
             <ChevronLeft className="w-5 h-5 text-gray-700" />
@@ -519,7 +519,7 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
           <button
             onClick={nextPage}
             disabled={currentPage >= totalPages}
-            className="p-2 rounded-full bg-white/90 hover:bg-white shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded-full bg-white/90 hover:bg-white hover:scale-105 active:scale-95 active:bg-gray-100 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             aria-label="Next page"
           >
             <ChevronRight className="w-5 h-5 text-gray-700" />
