@@ -10,9 +10,10 @@ interface SimplifierProps {
   onClose: () => void;
 }
 
-export default function Simplifier({ text, onClose }: SimplifierProps) {
+export default function Simplifier({ text, position, onClose }: SimplifierProps) {
   const [simplified, setSimplified] = useState('');
   const [loading, setLoading] = useState(false);
+  const [popupStyle, setPopupStyle] = useState<{ left: string; top: string }>({ left: '0px', top: '0px' });
   const popupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,6 +41,34 @@ export default function Simplifier({ text, onClose }: SimplifierProps) {
     };
   }, [onClose]);
 
+  // Smart positioning - position at selection, keep within viewport bounds
+  useEffect(() => {
+    if (!popupRef.current) return;
+
+    const popup = popupRef.current;
+    const rect = popup.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+
+    let x = position.x;
+    let y = position.y + 8; // 8px below selection by default
+
+    // If would go off bottom of screen, show above selection instead
+    if (y + rect.height > viewportHeight - 20) {
+      y = position.y - rect.height - 8;
+    }
+
+    // If would go off right edge, shift left
+    if (x + rect.width > viewportWidth - 20) {
+      x = viewportWidth - rect.width - 20;
+    }
+
+    // Never go off left edge
+    x = Math.max(20, x);
+
+    setPopupStyle({ left: `${x}px`, top: `${y}px` });
+  }, [position, simplified, loading]); // Recalculate when content changes
+
   const fetchDictionaryDefinition = async (word: string) => {
     try {
       const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word.toLowerCase()}`);
@@ -60,11 +89,11 @@ export default function Simplifier({ text, onClose }: SimplifierProps) {
     }
   };
 
-  const simplifyText = useCallback(async () => {
+  const simplifyText = useCallback(async (mode: 'explain' | 'eli5' = 'explain') => {
     setLoading(true);
-    
-    // For single words, try dictionary first
-    if (text.split(' ').length === 1) {
+
+    // For single words with "explain" mode, try dictionary first
+    if (mode === 'explain' && text.split(' ').length === 1) {
       const dictDefinition = await fetchDictionaryDefinition(text);
       if (dictDefinition) {
         setSimplified(dictDefinition);
@@ -72,22 +101,22 @@ export default function Simplifier({ text, onClose }: SimplifierProps) {
         return;
       }
     }
-    
+
     // Use AI for phrases or if dictionary fails
     try {
       const response = await fetch('/api/simplify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, mode }),
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('API error:', response.status, errorText);
         setSimplified('Failed to simplify text. Please try again.');
         return;
       }
-      
+
       const data = await response.json();
       setSimplified(data.simplified || 'Unable to simplify text');
     } catch (error) {
@@ -97,57 +126,54 @@ export default function Simplifier({ text, onClose }: SimplifierProps) {
     setLoading(false);
   }, [text]);
 
-  useEffect(() => {
-    // Small delay to ensure smooth UI transition
-    const timer = setTimeout(() => {
-      simplifyText();
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [text, simplifyText]);
 
   return (
     <>
       {/* Invisible backdrop for click-to-close */}
-      <div 
-        className="fixed inset-0 z-40" 
+      <div
+        className="fixed inset-0 z-40"
         onClick={onClose}
         aria-hidden="true"
       />
-      
+
       <div
         ref={popupRef}
-        className="fixed right-8 top-1/2 -translate-y-1/2 z-50 bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-6 max-w-md w-96 max-h-[70vh] overflow-hidden flex flex-col animate-in slide-in-from-right duration-200"
+        className="fixed z-50 bg-white border border-gray-200 rounded-md shadow-md py-1"
+        style={popupStyle}
       >
-
-      {/* Commented out selected text display
-      <div className="mb-3 p-3 bg-gray-50 rounded text-sm text-gray-600 max-h-32 overflow-y-auto flex-shrink-0">
-        {text}
-      </div>
-      */}
-
-      <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="flex flex-col items-center gap-3">
-              <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
-              <span className="text-xs text-gray-400">Understanding...</span>
-            </div>
-          </div>
-        ) : (
-          <div className="text-gray-700 leading-relaxed overflow-y-auto flex-1 text-[15px] font-light prose prose-sm max-w-none">
-            <ReactMarkdown
-              components={{
-                strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
-                em: ({ children }) => <em className="italic">{children}</em>,
-                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-              }}
-            >
-              {simplified || 'Simplifying...'}
-            </ReactMarkdown>
-          </div>
-        )}
-      </div>
+      {!simplified && !loading ? (
+        <>
+          <button
+            onClick={() => simplifyText('explain')}
+            className="w-full px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 text-left whitespace-nowrap"
+          >
+            Explain
+          </button>
+          <button
+            onClick={() => simplifyText('eli5')}
+            className="w-full px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 text-left whitespace-nowrap"
+          >
+            ELI5
+          </button>
+        </>
+      ) : loading ? (
+        <div className="flex items-center gap-2 px-3 py-1.5 min-w-[120px]">
+          <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+          <span className="text-sm text-gray-500">Loading...</span>
+        </div>
+      ) : (
+        <div className="text-gray-800 text-sm leading-relaxed overflow-y-auto max-h-[400px] max-w-md px-3 py-2">
+          <ReactMarkdown
+            components={{
+              strong: ({ children }) => <strong className="font-medium">{children}</strong>,
+              em: ({ children }) => <em className="italic">{children}</em>,
+              p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+            }}
+          >
+            {simplified}
+          </ReactMarkdown>
+        </div>
+      )}
     </div>
     </>
   );

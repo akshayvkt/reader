@@ -3,7 +3,7 @@ import { GoogleAuth } from 'google-auth-library';
 
 export async function POST(request: NextRequest) {
   try {
-    const { text } = await request.json();
+    const { text, mode = 'explain' } = await request.json();
 
     if (!text) {
       return NextResponse.json(
@@ -61,17 +61,15 @@ export async function POST(request: NextRequest) {
     const model = 'gemini-2.5-flash-lite'; // Using lightweight model for faster responses
     const apiUrl = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`;
 
-    const requestBody = {
-      contents: [{
-        role: 'user',
-        parts: [{
-          text: `You are an expert reading companion helping someone understand complex literature. The reader is intelligent but wants clarity on dense, archaic, or overly complex prose.
+    // Different prompts based on mode
+    const prompts = {
+      explain: `You are an expert reading companion helping someone understand complex literature. The reader is intelligent but wants clarity on dense, archaic, or overly complex prose.
 
 Text to simplify: "${text}"
 
 Provide a clear, modern English explanation that:
 - Preserves the original meaning and nuance
-- Uses everyday language a smart reader would understand  
+- Uses everyday language a smart reader would understand
 - For single words: Give a concise definition in context
 - For phrases/sentences: Rewrite in plain, contemporary English
 - For technical/specialized terms: Explain what it means in this context
@@ -83,7 +81,33 @@ Example transformations:
 "perspicacious" → "having keen insight or good judgment"
 "The edifice stood athwart the thoroughfare" → "The building stood across/blocking the street"
 
-Simplified explanation (do NOT repeat the original text):`
+Simplified explanation (do NOT repeat the original text):`,
+
+      eli5: `You are explaining complex ideas to someone who wants a super simple, easy-to-understand explanation - like you're talking to a smart 5-year-old or complete beginner.
+
+Text to explain: "${text}"
+
+Provide an explanation that:
+- Uses the simplest possible words and concepts
+- Breaks down complex ideas into basic building blocks
+- Uses everyday examples and analogies when helpful
+- Avoids jargon completely or explains it in the simplest terms
+- Is friendly and conversational
+- Keep it brief (2-3 sentences max)
+
+Example transformations:
+"quantum entanglement" → "Imagine two magic coins that always land on the same side, even if they're far apart. When one shows heads, the other instantly shows heads too, no matter how far away it is."
+"photosynthesis" → "Plants eat sunlight! They use sunshine, air, and water to make their own food and grow."
+"perspicacious" → "Really good at noticing things and understanding what they mean."
+
+Simple explanation (do NOT repeat the original text):`
+    };
+
+    const requestBody = {
+      contents: [{
+        role: 'user',
+        parts: [{
+          text: prompts[mode as keyof typeof prompts] || prompts.explain
         }]
       }],
       generationConfig: {
