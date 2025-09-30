@@ -2,11 +2,15 @@
   "name": "reader",
   "version": "0.1.0",
   "private": true,
+  "main": "electron-main.js",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "electron-dev": "NODE_ENV=development electron .",
+    "electron-build": "next build && next export -o out && electron-builder",
+    "dist": "npm run electron-build"
   },
   "dependencies": {
     "@google-cloud/vertexai": "^1.10.0",
@@ -15,6 +19,7 @@
     "google-auth-library": "^10.3.0",
     "lucide-react": "^0.544.0",
     "next": "15.5.3",
+    "pdfjs-dist": "^4.10.38",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-markdown": "^10.1.0"
@@ -25,9 +30,27 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "electron": "^38.1.0",
+    "electron-builder": "^26.0.12",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "build": {
+    "appId": "com.simplereader.app",
+    "productName": "Simple Reader",
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.books",
+      "icon": "public/icon.icns"
+    },
+    "files": [
+      "electron-main.js",
+      "out/**/*",
+      "node_modules/**/*"
+    ]
   }
 }
