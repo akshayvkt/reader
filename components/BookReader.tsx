@@ -38,6 +38,8 @@ const FONT_SIZE_OPTIONS = [
   { name: 'Medium', value: '16px' },
   { name: 'Large', value: '18px' },
   { name: 'Extra Large', value: '20px' },
+  { name: 'Larger', value: '22px' },
+  { name: 'Largest', value: '24px' },
 ];
 
 export default function BookReader({ bookData, filePath, onClose }: BookReaderProps) {
@@ -62,6 +64,8 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
   });
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showFontDropdown, setShowFontDropdown] = useState(false);
+  const [showSizeDots, setShowSizeDots] = useState(false);
+  const sizeDotsTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const selectionTimerRef = useRef<NodeJS.Timeout | null>(null);
   const settingsMenuRef = useRef<HTMLDivElement>(null);
@@ -359,6 +363,9 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
       if (selectionTimerRef.current) {
         clearTimeout(selectionTimerRef.current);
       }
+      if (sizeDotsTimerRef.current) {
+        clearTimeout(sizeDotsTimerRef.current);
+      }
       renditionRef.current = null;
       if (rend) {
         try {
@@ -429,14 +436,28 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
     localStorage.setItem('reader-line-spacing', spacing);
   }, []);
 
+  const showSizeDotsTemporarily = useCallback(() => {
+    // Clear any existing timer
+    if (sizeDotsTimerRef.current) {
+      clearTimeout(sizeDotsTimerRef.current);
+    }
+    // Show dots
+    setShowSizeDots(true);
+    // Hide after 1.5 seconds
+    sizeDotsTimerRef.current = setTimeout(() => {
+      setShowSizeDots(false);
+    }, 1500);
+  }, []);
+
   const decreaseFontSize = useCallback(() => {
     const currentIndex = FONT_SIZE_OPTIONS.findIndex(opt => opt.value === selectedFontSize);
     if (currentIndex > 0) {
       const newSize = FONT_SIZE_OPTIONS[currentIndex - 1].value;
       setSelectedFontSize(newSize);
       localStorage.setItem('reader-font-size', newSize);
+      showSizeDotsTemporarily();
     }
-  }, [selectedFontSize]);
+  }, [selectedFontSize, showSizeDotsTemporarily]);
 
   const increaseFontSize = useCallback(() => {
     const currentIndex = FONT_SIZE_OPTIONS.findIndex(opt => opt.value === selectedFontSize);
@@ -444,8 +465,9 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
       const newSize = FONT_SIZE_OPTIONS[currentIndex + 1].value;
       setSelectedFontSize(newSize);
       localStorage.setItem('reader-font-size', newSize);
+      showSizeDotsTemporarily();
     }
-  }, [selectedFontSize]);
+  }, [selectedFontSize, showSizeDotsTemporarily]);
 
   // Apply typography settings whenever they change
   useEffect(() => {
@@ -697,40 +719,61 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
                 )}
               </div>
 
-              {/* Size Section - Apple Books style A/A */}
-              <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                <span className="text-sm" style={{ color: 'var(--foreground)' }}>Size</span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={decreaseFontSize}
-                    disabled={selectedFontSize === FONT_SIZE_OPTIONS[0].value}
-                    className="w-9 h-9 flex items-center justify-center rounded-lg transition-all hover:scale-105 disabled:cursor-not-allowed disabled:hover:scale-100"
-                    style={{
-                      background: 'var(--background)',
-                      border: '1px solid var(--border)',
-                      color: selectedFontSize === FONT_SIZE_OPTIONS[0].value ? 'var(--foreground-subtle)' : 'var(--foreground)',
-                      fontFamily: 'Charter, Georgia, serif',
-                      fontSize: '12px',
-                      fontWeight: 500,
-                    }}
-                  >
-                    A
-                  </button>
-                  <button
-                    onClick={increaseFontSize}
-                    disabled={selectedFontSize === FONT_SIZE_OPTIONS[FONT_SIZE_OPTIONS.length - 1].value}
-                    className="w-9 h-9 flex items-center justify-center rounded-lg transition-all hover:scale-105 disabled:cursor-not-allowed disabled:hover:scale-100"
-                    style={{
-                      background: 'var(--background)',
-                      border: '1px solid var(--border)',
-                      color: selectedFontSize === FONT_SIZE_OPTIONS[FONT_SIZE_OPTIONS.length - 1].value ? 'var(--foreground-subtle)' : 'var(--foreground)',
-                      fontFamily: 'Charter, Georgia, serif',
-                      fontSize: '20px',
-                      fontWeight: 500,
-                    }}
-                  >
-                    A
-                  </button>
+              {/* Size Section - Apple Books style A/A with progress dots */}
+              <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm" style={{ color: 'var(--foreground)' }}>Size</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={decreaseFontSize}
+                      disabled={selectedFontSize === FONT_SIZE_OPTIONS[0].value}
+                      className="w-9 h-9 flex items-center justify-center rounded-lg transition-all hover:scale-105 disabled:cursor-not-allowed disabled:hover:scale-100"
+                      style={{
+                        background: 'var(--background)',
+                        border: '1px solid var(--border)',
+                        color: selectedFontSize === FONT_SIZE_OPTIONS[0].value ? 'var(--foreground-subtle)' : 'var(--foreground)',
+                        fontFamily: 'Charter, Georgia, serif',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                      }}
+                    >
+                      A
+                    </button>
+                    <button
+                      onClick={increaseFontSize}
+                      disabled={selectedFontSize === FONT_SIZE_OPTIONS[FONT_SIZE_OPTIONS.length - 1].value}
+                      className="w-9 h-9 flex items-center justify-center rounded-lg transition-all hover:scale-105 disabled:cursor-not-allowed disabled:hover:scale-100"
+                      style={{
+                        background: 'var(--background)',
+                        border: '1px solid var(--border)',
+                        color: selectedFontSize === FONT_SIZE_OPTIONS[FONT_SIZE_OPTIONS.length - 1].value ? 'var(--foreground-subtle)' : 'var(--foreground)',
+                        fontFamily: 'Charter, Georgia, serif',
+                        fontSize: '20px',
+                        fontWeight: 500,
+                      }}
+                    >
+                      A
+                    </button>
+                  </div>
+                </div>
+                {/* Progress dots - appear briefly when changing size */}
+                <div
+                  className="flex items-center justify-center gap-1.5 mt-3 transition-opacity duration-300"
+                  style={{ opacity: showSizeDots ? 1 : 0 }}
+                >
+                  {FONT_SIZE_OPTIONS.map((_, index) => {
+                    const currentIndex = FONT_SIZE_OPTIONS.findIndex(opt => opt.value === selectedFontSize);
+                    const isFilled = index <= currentIndex;
+                    return (
+                      <div
+                        key={index}
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{
+                          background: isFilled ? 'var(--foreground)' : 'rgba(45, 42, 38, 0.25)',
+                        }}
+                      />
+                    );
+                  })}
                 </div>
               </div>
 
