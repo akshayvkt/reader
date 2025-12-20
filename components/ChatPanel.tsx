@@ -17,8 +17,28 @@ export default function ChatPanel() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const userMessageRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const lastUserMessageIndex = useRef<number>(-1);
+  const shouldScrollToUserMessage = useRef<boolean>(false);
+
+  // Scroll to user message when flag is set
+  useEffect(() => {
+    if (shouldScrollToUserMessage.current && userMessageRef.current && messagesContainerRef.current) {
+      const container = messagesContainerRef.current;
+      const userMessage = userMessageRef.current;
+
+      // Calculate scroll position to put user message at top of container
+      const containerRect = container.getBoundingClientRect();
+      const messageRect = userMessage.getBoundingClientRect();
+      const scrollOffset = messageRect.top - containerRect.top + container.scrollTop;
+
+      container.scrollTo({
+        top: scrollOffset,
+        behavior: 'smooth'
+      });
+      shouldScrollToUserMessage.current = false;
+    }
+  }, [conversation?.messages]);
 
   // Focus input when panel opens
   useEffect(() => {
@@ -35,17 +55,12 @@ export default function ChatPanel() {
       content: input.trim(),
     };
 
-    // Track index of this user message for scrolling
-    lastUserMessageIndex.current = conversation.messages.length;
+    // Flag to scroll to this user message after it renders
+    shouldScrollToUserMessage.current = true;
 
     addMessage(userMessage);
     setInput('');
     setSending(true);
-
-    // Scroll to user message after it renders
-    setTimeout(() => {
-      userMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 50);
 
     // Determine the context based on scope
     let scopeContext: string | undefined;
@@ -185,11 +200,13 @@ export default function ChatPanel() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {conversation.messages.map((msg, index) => {
-          const isTrackedUserMessage = index === lastUserMessageIndex.current;
+          // Attach ref to the last user message
+          const isLastUserMessage = msg.role === 'user' &&
+            !conversation.messages.slice(index + 1).some(m => m.role === 'user');
           return (
-            <div key={msg.id} ref={isTrackedUserMessage ? userMessageRef : null}>
+            <div key={msg.id} ref={isLastUserMessage ? userMessageRef : null}>
               <div className="text-xs font-medium mb-1" style={{ color: 'var(--accent)' }}>
                 {msg.role === 'user' ? 'You:' : 'Reader:'}
               </div>
