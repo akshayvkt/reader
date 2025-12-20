@@ -128,21 +128,18 @@ export default function ReaderLayout({ children, onResize }: ReaderLayoutProps) 
         )}
       </div>
 
-      {/* Draggable divider */}
+      {/* Draggable divider - minimal, subtle line */}
       {isExpanded && (
         <div
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
-          className="w-3 h-full cursor-col-resize flex items-center justify-center touch-none"
-          style={{ background: 'transparent' }}
-        >
-          {/* Visual divider line */}
-          <div
-            className="w-1 h-full pointer-events-none transition-colors"
-            style={{ background: isDragging ? 'var(--accent)' : 'var(--border)' }}
-          />
-        </div>
+          className="w-1 h-full cursor-col-resize touch-none transition-opacity duration-200 hover:opacity-100"
+          style={{
+            background: 'var(--border)',
+            opacity: isDragging ? 1 : 0.3
+          }}
+        />
       )}
 
       {/* Chat panel */}
