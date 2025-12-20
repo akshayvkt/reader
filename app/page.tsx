@@ -1,12 +1,30 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { BookOpen } from 'lucide-react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { BookOpen, Plus } from 'lucide-react';
 import BookReaderWrapper from '@/components/BookReaderWrapper';
+import HeroBookCard from '@/components/HeroBookCard';
+import RecentBookCard from '@/components/RecentBookCard';
+import { getRecentBooks } from '@/lib/libraryStorage';
+import { RecentBook } from '@/types/library';
 
 export default function Home() {
   const [bookData, setBookData] = useState<ArrayBuffer | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [recentBooks, setRecentBooks] = useState<RecentBook[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load recent books on mount
+  useEffect(() => {
+    setRecentBooks(getRecentBooks());
+  }, []);
+
+  // Refresh recent books when returning from reader
+  useEffect(() => {
+    if (!bookData) {
+      setRecentBooks(getRecentBooks());
+    }
+  }, [bookData]);
 
   const handleFileUpload = useCallback(async (file: File) => {
     const isEpub = file.type === 'application/epub+zip' || file.name.endsWith('.epub');
@@ -44,73 +62,200 @@ export default function Home() {
     if (file) handleFileUpload(file);
   }, [handleFileUpload]);
 
+  const openFilePicker = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
   if (bookData) {
     return <BookReaderWrapper bookData={bookData} onClose={() => setBookData(null)} />;
   }
 
+  const hasRecentBooks = recentBooks.length > 0;
+  const currentBook = recentBooks[0];
+  const otherBooks = recentBooks.slice(1);
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-8" style={{ background: 'var(--background)' }}>
-      <div className="w-full max-w-2xl">
-        <div
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          className={`
-            relative rounded-3xl p-20 text-center
-            transition-all duration-300 ease-out cursor-pointer
-            ${isDragging
-              ? 'scale-[1.02]'
-              : 'hover:scale-[1.01]'
-            }
-          `}
-          style={{
-            background: 'var(--surface)',
-            boxShadow: isDragging
-              ? '0 20px 40px rgba(45, 42, 38, 0.15)'
-              : '0 4px 20px rgba(45, 42, 38, 0.08)',
-            border: '1px solid var(--border-subtle)'
-          }}
-        >
-          <input
-            type="file"
-            accept=".epub,application/epub+zip,.pdf,application/pdf"
-            onChange={handleFileSelect}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          />
+    <div
+      className="min-h-screen"
+      style={{ background: 'var(--background)' }}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+    >
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".epub,application/epub+zip,.pdf,application/pdf"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
 
-          <div className="flex flex-col items-center gap-6">
-            <BookOpen
-              className={`w-12 h-12 transition-all duration-300 ${isDragging ? 'scale-110' : ''}`}
-              style={{ color: isDragging ? 'var(--accent)' : 'var(--foreground-subtle)' }}
-            />
-
-            <div className="text-center">
-              <p
-                className="text-xl mb-1"
-                style={{ fontFamily: 'var(--font-libre-baskerville)', color: 'var(--foreground)' }}
-              >
-                Add your book
-              </p>
-              <p
-                className="text-sm"
-                style={{ color: 'var(--foreground-subtle)' }}
-              >
-                EPUB or PDF files
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Minimal branding */}
-        <div className="mt-12 text-center">
+      <div className="max-w-3xl mx-auto px-6 py-12">
+        {/* Header */}
+        <header className="flex items-center justify-between mb-12">
           <h1
-            className="text-xs font-medium tracking-wider uppercase"
-            style={{ fontFamily: 'var(--font-libre-baskerville)', color: 'var(--foreground-subtle)' }}
+            className="text-xs font-medium uppercase tracking-wider"
+            style={{
+              fontFamily: 'var(--font-libre-baskerville)',
+              color: 'var(--foreground-muted)',
+              letterSpacing: '0.1em',
+            }}
           >
             Reader
           </h1>
-        </div>
+
+          <button
+            onClick={openFilePicker}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-105"
+            style={{
+              background: 'var(--surface)',
+              color: 'var(--foreground-muted)',
+              border: '1px solid var(--border-subtle)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--foreground)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(45, 42, 38, 0.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--foreground-muted)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <Plus className="w-4 h-4" />
+            Add Book
+          </button>
+        </header>
+
+        {hasRecentBooks ? (
+          <>
+            {/* Hero: Continue Reading */}
+            <section className="mb-12">
+              <HeroBookCard
+                book={currentBook}
+                onClick={openFilePicker}
+              />
+            </section>
+
+            {/* Other Recent Books */}
+            {otherBooks.length > 0 && (
+              <section>
+                <h2
+                  className="text-xs font-medium uppercase tracking-wider mb-6"
+                  style={{
+                    color: 'var(--foreground-muted)',
+                    letterSpacing: '0.1em',
+                  }}
+                >
+                  Recent
+                </h2>
+
+                <div className="flex gap-6 flex-wrap">
+                  {otherBooks.map((book, index) => (
+                    <RecentBookCard
+                      key={book.id}
+                      book={book}
+                      onClick={openFilePicker}
+                      index={index}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
+        ) : (
+          /* Empty State - Original Drop Zone */
+          <div
+            className={`
+              relative rounded-3xl p-20 text-center
+              transition-all duration-300 ease-out cursor-pointer
+              ${isDragging ? 'scale-[1.02]' : 'hover:scale-[1.01]'}
+            `}
+            style={{
+              background: 'var(--surface)',
+              boxShadow: isDragging
+                ? '0 20px 40px rgba(45, 42, 38, 0.15)'
+                : '0 4px 20px rgba(45, 42, 38, 0.08)',
+              border: '1px solid var(--border-subtle)',
+            }}
+            onClick={openFilePicker}
+          >
+            <div className="flex flex-col items-center gap-6">
+              <BookOpen
+                className={`w-12 h-12 transition-all duration-300 ${isDragging ? 'scale-110' : ''}`}
+                style={{ color: isDragging ? 'var(--accent)' : 'var(--foreground-subtle)' }}
+              />
+
+              <div className="text-center">
+                <p
+                  className="text-xl mb-1"
+                  style={{ fontFamily: 'var(--font-libre-baskerville)', color: 'var(--foreground)' }}
+                >
+                  Add your book
+                </p>
+                <p
+                  className="text-sm"
+                  style={{ color: 'var(--foreground-subtle)' }}
+                >
+                  EPUB or PDF files
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Drag overlay when dragging over the page */}
+        {isDragging && hasRecentBooks && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+            style={{ background: 'rgba(250, 247, 242, 0.95)' }}
+          >
+            <div className="text-center animate-fade-in">
+              <BookOpen
+                className="w-16 h-16 mx-auto mb-4"
+                style={{ color: 'var(--accent)' }}
+              />
+              <p
+                className="text-xl"
+                style={{ fontFamily: 'var(--font-libre-baskerville)', color: 'var(--foreground)' }}
+              >
+                Drop to open
+              </p>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Global animations */}
+      <style jsx global>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        .animate-fade-in-up {
+          animation: fadeInUp 0.4s ease-out forwards;
+        }
+
+        .animate-fade-in {
+          animation: fadeIn 0.3s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 }

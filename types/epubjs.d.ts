@@ -16,6 +16,7 @@ declare module 'epubjs' {
     navigation: Navigation;
     locations: Locations;
     spine: Spine;
+    coverUrl(): Promise<string | null>;
     package?: unknown;
   }
 

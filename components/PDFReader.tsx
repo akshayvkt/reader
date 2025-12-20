@@ -5,6 +5,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { TextLayer } from 'pdfjs-dist';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCw, Maximize2, Minimize2 } from 'lucide-react';
 import Simplifier from './Simplifier';
+import { addRecentBook, updateBookProgress } from '../lib/libraryStorage';
 import '../app/pdf-viewer.css';
 
 // Set worker path
@@ -54,8 +55,37 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
         setPdf(pdfDocument);
         setTotalPages(pdfDocument.numPages);
 
+        const bookId = bookData.byteLength.toString();
+
+        // Extract metadata and save to library
+        try {
+          const metadata = await pdfDocument.getMetadata();
+          const info = metadata?.info as Record<string, string> | undefined;
+
+          addRecentBook({
+            id: bookId,
+            title: info?.Title || 'Untitled PDF',
+            author: info?.Author || 'Unknown Author',
+            coverUrl: null, // PDFs don't have embedded covers easily
+            lastOpened: Date.now(),
+            progress: 0,
+            fileType: 'pdf',
+          });
+        } catch {
+          // Metadata extraction failed, save with defaults
+          addRecentBook({
+            id: bookId,
+            title: 'Untitled PDF',
+            author: 'Unknown Author',
+            coverUrl: null,
+            lastOpened: Date.now(),
+            progress: 0,
+            fileType: 'pdf',
+          });
+        }
+
         // Load saved page position
-        const savedPage = localStorage.getItem(`pdf-page-${bookData.byteLength}`);
+        const savedPage = localStorage.getItem(`pdf-page-${bookId}`);
         if (savedPage) {
           setCurrentPage(parseInt(savedPage, 10));
         }
@@ -135,6 +165,17 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
       renderPage(currentPage);
     }
   }, [currentPage, pdf, renderPage]);
+
+  // Update progress when page changes
+  useEffect(() => {
+    if (totalPages > 0 && bookData) {
+      const bookId = bookData.byteLength.toString();
+      const progress = Math.round((currentPage / totalPages) * 100);
+      updateBookProgress(bookId, progress);
+      // Also save current page
+      localStorage.setItem(`pdf-page-${bookId}`, currentPage.toString());
+    }
+  }, [currentPage, totalPages, bookData]);
 
   // Navigation functions
   const nextPage = useCallback(() => {

@@ -8,6 +8,7 @@ import Simplifier from './Simplifier';
 import ChapterNav from './ChapterNav';
 import { useChat } from '../contexts/ChatContext';
 import { ChatMessage } from '../types/chat';
+import { addRecentBook, updateBookProgress } from '../lib/libraryStorage';
 
 export interface BookReaderProps {
   bookData: ArrayBuffer;
@@ -129,8 +130,28 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
           setTableOfContents(book.navigation.toc);
         }
 
-        // Generate locations for page numbers (in background)
+        // Book ID for localStorage
         const bookId = bookData.byteLength.toString();
+
+        // Save book to recent library
+        try {
+          const metadata = await book.loaded.metadata;
+          const coverUrl = await book.coverUrl();
+
+          addRecentBook({
+            id: bookId,
+            title: metadata?.title || 'Untitled',
+            author: metadata?.creator || 'Unknown Author',
+            coverUrl: coverUrl || null,
+            lastOpened: Date.now(),
+            progress: 0,
+            fileType: 'epub',
+          });
+        } catch (error) {
+          console.error('Error saving book metadata:', error);
+        }
+
+        // Generate locations for page numbers (in background)
         const cachedLocations = localStorage.getItem(`book-locations-${bookId}`);
 
         if (cachedLocations) {
@@ -309,6 +330,15 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
           // Track current href for chapter highlighting
           if (loc.start.href) {
             setCurrentHref(loc.start.href);
+          }
+          // Update progress in library
+          try {
+            if (book.locations?.total) {
+              const percentage = book.locations.percentageFromCfi(loc.start.cfi);
+              updateBookProgress(bookId, Math.round(percentage * 100), loc.start.cfi);
+            }
+          } catch {
+            // Locations may not be ready yet
           }
         });
       } catch (error) {
