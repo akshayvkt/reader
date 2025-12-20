@@ -88,11 +88,9 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Page transition state (Apple Books-style page flip)
-  const [pageFlipState, setPageFlipState] = useState<'idle' | 'curling' | 'entering'>('idle');
-  const [flipDirection, setFlipDirection] = useState<'next' | 'prev' | null>(null);
-  const [showPageCurl, setShowPageCurl] = useState(false);
-  const PAGE_FLIP_DURATION = 600; // ms - slower for realistic page curl
+  // Page transition state - simple fade
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const FADE_DURATION = 150; // ms - quick and clean
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const searchPanelRef = useRef<HTMLDivElement>(null);
@@ -501,47 +499,28 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
   }, [bookData, filePath]);
 
   const nextPage = useCallback(() => {
-    if (pageFlipState !== 'idle') return;
+    if (isTransitioning) return;
 
-    // NEXT: Show page curl overlay, swap content underneath, animate curl away
-    setFlipDirection('next');
-    setShowPageCurl(true);
-    setPageFlipState('curling');
+    setIsTransitioning(true);
 
-    // Swap content immediately - it's hidden under the curl overlay
-    // Small delay to ensure overlay is rendered first
+    // Fade out, swap content, then appear
     setTimeout(() => {
       renditionRef.current?.next();
-    }, 50);
-
-    // After curl animation completes, hide overlay and reset
-    setTimeout(() => {
-      setShowPageCurl(false);
-      setPageFlipState('idle');
-      setFlipDirection(null);
-    }, PAGE_FLIP_DURATION);
-  }, [pageFlipState]);
+      setIsTransitioning(false);
+    }, FADE_DURATION);
+  }, [isTransitioning]);
 
   const prevPage = useCallback(() => {
-    if (pageFlipState !== 'idle') return;
+    if (isTransitioning) return;
 
-    // PREV: Curl comes from left, covers content, then reveals previous page
-    setFlipDirection('prev');
-    setShowPageCurl(true);
-    setPageFlipState('entering');
+    setIsTransitioning(true);
 
-    // Swap content near the end when curl covers everything
+    // Fade out, swap content, then appear
     setTimeout(() => {
       renditionRef.current?.prev();
-    }, PAGE_FLIP_DURATION * 0.7);
-
-    // After animation completes, hide overlay and reset
-    setTimeout(() => {
-      setShowPageCurl(false);
-      setPageFlipState('idle');
-      setFlipDirection(null);
-    }, PAGE_FLIP_DURATION);
-  }, [pageFlipState]);
+      setIsTransitioning(false);
+    }, FADE_DURATION);
+  }, [isTransitioning]);
 
   // Get current theme colors from CSS variables
   const getThemeColors = useCallback(() => {
@@ -1291,224 +1270,17 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
           style={{
             padding: '48px 24px',
             background: 'var(--surface)',
-            perspective: '1200px', // Enable 3D space for page flip
           }}
         >
-          {/* CSS Keyframe animations for page curl */}
-          <style>{`
-            @keyframes pageCurlNext {
-              0% {
-                clip-path: polygon(
-                  0% 0%,
-                  92% 0%,
-                  95% 5%,
-                  97% 15%,
-                  98% 30%,
-                  98% 70%,
-                  97% 85%,
-                  95% 95%,
-                  92% 100%,
-                  0% 100%
-                );
-                transform: translateX(0%);
-              }
-              30% {
-                clip-path: polygon(
-                  0% 0%,
-                  60% 0%,
-                  70% 8%,
-                  75% 20%,
-                  78% 40%,
-                  78% 60%,
-                  75% 80%,
-                  70% 92%,
-                  60% 100%,
-                  0% 100%
-                );
-                transform: translateX(-30%);
-              }
-              60% {
-                clip-path: polygon(
-                  0% 0%,
-                  30% 0%,
-                  42% 10%,
-                  48% 25%,
-                  50% 50%,
-                  48% 75%,
-                  42% 90%,
-                  30% 100%,
-                  0% 100%
-                );
-                transform: translateX(-60%);
-              }
-              100% {
-                clip-path: polygon(
-                  0% 0%,
-                  2% 0%,
-                  8% 15%,
-                  10% 35%,
-                  10% 65%,
-                  8% 85%,
-                  2% 100%,
-                  0% 100%,
-                  0% 100%
-                );
-                transform: translateX(-95%);
-              }
-            }
-
-            @keyframes pageCurlPrev {
-              0% {
-                clip-path: polygon(
-                  8% 0%,
-                  100% 0%,
-                  100% 100%,
-                  8% 100%,
-                  2% 85%,
-                  0% 65%,
-                  0% 35%,
-                  2% 15%,
-                  8% 0%
-                );
-                transform: translateX(95%);
-              }
-              40% {
-                clip-path: polygon(
-                  30% 0%,
-                  100% 0%,
-                  100% 100%,
-                  30% 100%,
-                  20% 90%,
-                  15% 75%,
-                  13% 50%,
-                  15% 25%,
-                  20% 10%
-                );
-                transform: translateX(60%);
-              }
-              70% {
-                clip-path: polygon(
-                  60% 0%,
-                  100% 0%,
-                  100% 100%,
-                  60% 100%,
-                  50% 92%,
-                  45% 80%,
-                  43% 60%,
-                  43% 40%,
-                  45% 20%,
-                  50% 8%
-                );
-                transform: translateX(30%);
-              }
-              100% {
-                clip-path: polygon(
-                  92% 0%,
-                  100% 0%,
-                  100% 100%,
-                  92% 100%,
-                  88% 95%,
-                  85% 85%,
-                  84% 70%,
-                  84% 30%,
-                  85% 15%,
-                  88% 5%
-                );
-                transform: translateX(0%);
-              }
-            }
-
-            @keyframes curlShadowNext {
-              0% {
-                opacity: 0.3;
-                transform: translateX(0%);
-              }
-              100% {
-                opacity: 0;
-                transform: translateX(-95%);
-              }
-            }
-
-            @keyframes curlShadowPrev {
-              0% {
-                opacity: 0;
-                transform: translateX(95%);
-              }
-              100% {
-                opacity: 0.3;
-                transform: translateX(0%);
-              }
-            }
-          `}</style>
-
-          {/* The actual epub content */}
+          {/* The epub content with simple fade transition */}
           <div
             ref={viewerRef}
             className="w-full h-full"
+            style={{
+              opacity: isTransitioning ? 0 : 1,
+              transition: `opacity ${FADE_DURATION}ms ease-out`,
+            }}
           />
-
-          {/* Page curl overlay - covers content, then curls away to reveal new page */}
-          {showPageCurl && (
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                // Main page color with gradient toward the edge for depth
-                background: flipDirection === 'next'
-                  ? 'linear-gradient(to right, var(--surface) 0%, var(--surface) 80%, var(--foreground-muted) 98%, var(--foreground) 100%)'
-                  : 'linear-gradient(to left, var(--surface) 0%, var(--surface) 80%, var(--foreground-muted) 98%, var(--foreground) 100%)',
-                animation: flipDirection === 'next'
-                  ? `pageCurlNext ${PAGE_FLIP_DURATION}ms ease-in-out forwards`
-                  : `pageCurlPrev ${PAGE_FLIP_DURATION}ms ease-in-out forwards`,
-                zIndex: 10,
-              }}
-            />
-          )}
-
-          {/* Inner page surface - slightly offset to create depth */}
-          {showPageCurl && (
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: 'var(--surface)',
-                animation: flipDirection === 'next'
-                  ? `pageCurlNext ${PAGE_FLIP_DURATION}ms ease-in-out forwards`
-                  : `pageCurlPrev ${PAGE_FLIP_DURATION}ms ease-in-out forwards`,
-                // Slightly smaller clip to show the edge color behind
-                clipPath: flipDirection === 'next'
-                  ? 'inset(0 3% 0 0)'
-                  : 'inset(0 0 0 3%)',
-                zIndex: 12,
-              }}
-            />
-          )}
-
-          {/* Curl edge shadow - cast onto the revealed page */}
-          {showPageCurl && (
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: flipDirection === 'next'
-                  ? 'linear-gradient(to left, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.1) 3%, transparent 12%)'
-                  : 'linear-gradient(to right, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.1) 3%, transparent 12%)',
-                animation: flipDirection === 'next'
-                  ? `curlShadowNext ${PAGE_FLIP_DURATION}ms ease-in-out forwards`
-                  : `curlShadowPrev ${PAGE_FLIP_DURATION}ms ease-in-out forwards`,
-                zIndex: 9,
-              }}
-            />
-          )}
         </div>
         
         {/* Visible navigation buttons at bottom */}
