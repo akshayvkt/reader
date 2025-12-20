@@ -233,13 +233,29 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
         // Save book to recent library
         try {
           const metadata = await book.loaded.metadata;
-          const coverUrl = await book.coverUrl();
+          const blobCoverUrl = await book.coverUrl();
+
+          // Convert blob URL to base64 data URL for persistence
+          let coverDataUrl: string | null = null;
+          if (blobCoverUrl) {
+            try {
+              const response = await fetch(blobCoverUrl);
+              const blob = await response.blob();
+              coverDataUrl = await new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.readAsDataURL(blob);
+              });
+            } catch (coverError) {
+              console.error('Error converting cover to base64:', coverError);
+            }
+          }
 
           addRecentBook({
             id: bookId,
             title: metadata?.title || 'Untitled',
             author: metadata?.creator || 'Unknown Author',
-            coverUrl: coverUrl || null,
+            coverUrl: coverDataUrl,
             lastOpened: Date.now(),
             progress: 0,
             fileType: 'epub',
