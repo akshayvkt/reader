@@ -1,20 +1,27 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Loader2, Lightbulb, Sparkles } from 'lucide-react';
+import { Loader2, Lightbulb, Sparkles, Send, Maximize2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { ChatMessage } from '../types/chat';
 
 interface SimplifierProps {
   text: string;
   position: { x: number; y: number };
   onClose: () => void;
+  onExpand?: (originalText: string, messages: ChatMessage[]) => void;
+  bookContext?: string;
 }
 
-export default function Simplifier({ text, position, onClose }: SimplifierProps) {
+export default function Simplifier({ text, position, onClose, onExpand }: SimplifierProps) {
   const [simplified, setSimplified] = useState('');
   const [loading, setLoading] = useState(false);
+  const [followUpInput, setFollowUpInput] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [sendingFollowUp, setSendingFollowUp] = useState(false);
   const [popupStyle, setPopupStyle] = useState<{ left: string; top: string }>({ left: '0px', top: '0px' });
   const popupRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -118,13 +125,84 @@ export default function Simplifier({ text, position, onClose }: SimplifierProps)
       }
 
       const data = await response.json();
-      setSimplified(data.simplified || 'Unable to simplify text');
+      const responseText = data.simplified || 'Unable to simplify text';
+      setSimplified(responseText);
+
+      // Store as first message in conversation
+      const assistantMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: responseText,
+        timestamp: Date.now(),
+      };
+      setMessages([assistantMessage]);
     } catch (error) {
       console.error('Failed to simplify text:', error);
       setSimplified('Failed to simplify text. Please try again.');
     }
     setLoading(false);
   }, [text]);
+
+  const sendFollowUp = useCallback(async () => {
+    if (!followUpInput.trim() || sendingFollowUp) return;
+
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: followUpInput.trim(),
+      timestamp: Date.now(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setFollowUpInput('');
+    setSendingFollowUp(true);
+
+    try {
+      const response = await fetch('/api/simplify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: userMessage.content,
+          mode: 'followup',
+          originalText: text,
+          conversationHistory: messages.map(m => ({
+            role: m.role,
+            content: m.content,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response');
+      }
+
+      const data = await response.json();
+      const assistantMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: data.simplified || 'Unable to respond',
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Failed to send follow-up:', error);
+      const errorMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: 'Failed to get response. Please try again.',
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    }
+    setSendingFollowUp(false);
+  }, [followUpInput, sendingFollowUp, text, messages]);
+
+  const handleExpandToChat = useCallback(() => {
+    if (onExpand && messages.length > 0) {
+      onExpand(text, messages);
+      onClose();
+    }
+  }, [onExpand, text, messages, onClose]);
 
 
   return (
@@ -187,16 +265,86 @@ export default function Simplifier({ text, position, onClose }: SimplifierProps)
           <span className="text-sm font-medium" style={{ color: 'var(--foreground-muted)' }}>Loading...</span>
         </div>
       ) : (
-        <div className="text-sm leading-relaxed overflow-y-auto max-h-[400px] max-w-md px-4 py-2" style={{ color: 'var(--foreground)' }}>
-          <ReactMarkdown
-            components={{
-              strong: ({ children }) => <strong className="font-medium">{children}</strong>,
-              em: ({ children }) => <em className="italic">{children}</em>,
-              p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-            }}
-          >
-            {simplified}
-          </ReactMarkdown>
+        <div className="max-w-md">
+          {/* Messages */}
+          <div className="text-sm leading-relaxed overflow-y-auto max-h-[300px] px-4 py-2" style={{ color: 'var(--foreground)' }}>
+            {messages.map((msg, index) => (
+              <div key={msg.id} className={index > 0 ? 'mt-3 pt-3' : ''} style={{ borderTop: index > 0 ? '1px solid var(--border-subtle)' : 'none' }}>
+                <div className="text-xs font-medium mb-1" style={{ color: 'var(--accent)' }}>
+                  {msg.role === 'user' ? 'You:' : 'Reader:'}
+                </div>
+                <ReactMarkdown
+                  components={{
+                    strong: ({ children }) => <strong className="font-medium">{children}</strong>,
+                    em: ({ children }) => <em className="italic">{children}</em>,
+                    p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                  }}
+                >
+                  {msg.content}
+                </ReactMarkdown>
+              </div>
+            ))}
+            {sendingFollowUp && (
+              <div className="mt-3 pt-3 flex items-center gap-2" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--accent)' }} />
+                <span style={{ color: 'var(--foreground-muted)' }}>Thinking...</span>
+              </div>
+            )}
+          </div>
+
+          {/* Follow-up input */}
+          <div className="px-4 py-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+            <div className="flex gap-2">
+              <input
+                ref={inputRef}
+                type="text"
+                value={followUpInput}
+                onChange={(e) => setFollowUpInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendFollowUp();
+                  }
+                }}
+                placeholder="Ask a follow-up..."
+                className="flex-1 px-3 py-1.5 text-sm rounded-lg outline-none transition-colors"
+                style={{
+                  background: 'var(--background)',
+                  color: 'var(--foreground)',
+                  border: '1px solid var(--border)',
+                }}
+                disabled={sendingFollowUp}
+              />
+              <button
+                onClick={sendFollowUp}
+                disabled={!followUpInput.trim() || sendingFollowUp}
+                className="p-1.5 rounded-lg transition-colors disabled:opacity-50"
+                style={{ background: 'var(--accent)', color: 'white' }}
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Expand to Chat button */}
+            {onExpand && messages.length > 0 && (
+              <button
+                onClick={handleExpandToChat}
+                className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
+                style={{ background: 'var(--background)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--accent-subtle)';
+                  e.currentTarget.style.color = 'var(--accent)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--background)';
+                  e.currentTarget.style.color = 'var(--foreground-muted)';
+                }}
+              >
+                <Maximize2 className="w-3 h-3" />
+                Expand to Chat
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

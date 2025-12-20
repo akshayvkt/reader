@@ -461,32 +461,45 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 bg-gray-50 flex flex-col outline-none"
+      className="h-full w-full flex flex-col outline-none"
+      style={{ background: 'var(--background)' }}
       tabIndex={0}
       autoFocus
     >
       {/* Header with controls */}
-      <header className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 bg-gradient-to-b from-white/90 to-transparent transition-opacity hover:opacity-100 opacity-0">
+      <header
+        className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 transition-opacity hover:opacity-100 opacity-0"
+        style={{ background: 'linear-gradient(to bottom, var(--surface) 0%, transparent 100%)' }}
+      >
         <button
           onClick={onClose}
-          className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white/80 backdrop-blur rounded-lg"
+          className="px-3 py-1.5 text-sm font-medium backdrop-blur rounded-lg transition-colors"
+          style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
+          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
+          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
         >
           ← Back to Library
         </button>
 
         <div className="flex items-center gap-4">
           {/* Page indicator */}
-          <span className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-white/80 backdrop-blur rounded-lg">
+          <span
+            className="px-3 py-1.5 text-sm font-medium backdrop-blur rounded-lg"
+            style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
+          >
             Page {currentPage} of {totalPages}
           </span>
 
-          <div className="w-px h-6 bg-gray-300/50" />
+          <div className="w-px h-6 hidden sm:block" style={{ background: 'var(--border)' }} />
 
           {/* Zoom controls */}
           <div className="flex items-center gap-2">
             <button
               onClick={zoomOut}
-              className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white/80 backdrop-blur rounded-lg flex items-center gap-2"
+              className="px-3 py-1.5 text-sm font-medium backdrop-blur rounded-lg flex items-center gap-2 transition-colors"
+              style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
               aria-label="Zoom out"
             >
               <ZoomOut className="w-4 h-4" />
@@ -494,7 +507,10 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
 
             <button
               onClick={resetZoom}
-              className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white/80 backdrop-blur rounded-lg flex items-center gap-2"
+              className="px-3 py-1.5 text-sm font-medium backdrop-blur rounded-lg flex items-center gap-2 transition-colors"
+              style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
               aria-label="Reset zoom"
             >
               <RotateCw className="w-4 h-4" />
@@ -503,19 +519,25 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
 
             <button
               onClick={zoomIn}
-              className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white/80 backdrop-blur rounded-lg flex items-center gap-2"
+              className="px-3 py-1.5 text-sm font-medium backdrop-blur rounded-lg flex items-center gap-2 transition-colors"
+              style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
               aria-label="Zoom in"
             >
               <ZoomIn className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="w-px h-6 bg-gray-300/50" />
+          <div className="w-px h-6 hidden sm:block" style={{ background: 'var(--border)' }} />
 
           {/* Fullscreen toggle */}
           <button
             onClick={toggleFullscreen}
-            className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white/80 backdrop-blur rounded-lg flex items-center gap-2"
+            className="px-3 py-1.5 text-sm font-medium backdrop-blur rounded-lg flex items-center gap-2 transition-colors"
+            style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
             aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
             title="Press F to toggle fullscreen"
           >
@@ -543,19 +565,21 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
           <button
             onClick={prevPage}
             disabled={currentPage <= 1}
-            className="p-1.5 rounded-full bg-white/90 hover:bg-white hover:scale-105 active:scale-95 active:bg-gray-100 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            className="p-2 rounded-full transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            style={{ background: 'var(--surface)', boxShadow: '0 4px 16px rgba(45, 42, 38, 0.1)', border: '1px solid var(--border-subtle)' }}
             aria-label="Previous page"
           >
-            <ChevronLeft className="w-4 h-4 text-gray-700" />
+            <ChevronLeft className="w-5 h-5" style={{ color: 'var(--foreground-muted)' }} />
           </button>
 
           <button
             onClick={nextPage}
             disabled={currentPage >= totalPages}
-            className="p-1.5 rounded-full bg-white/90 hover:bg-white hover:scale-105 active:scale-95 active:bg-gray-100 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            className="p-2 rounded-full transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            style={{ background: 'var(--surface)', boxShadow: '0 4px 16px rgba(45, 42, 38, 0.1)', border: '1px solid var(--border-subtle)' }}
             aria-label="Next page"
           >
-            <ChevronRight className="w-4 h-4 text-gray-700" />
+            <ChevronRight className="w-5 h-5" style={{ color: 'var(--foreground-muted)' }} />
           </button>
         </div>
       </div>

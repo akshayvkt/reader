@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleAuth } from 'google-auth-library';
 
+interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { text, mode = 'explain' } = await request.json();
+    const { text, mode = 'explain', conversationHistory, originalText } = await request.json() as {
+      text: string;
+      mode?: 'explain' | 'eli5' | 'followup';
+      conversationHistory?: ConversationMessage[];
+      originalText?: string;
+    };
 
     if (!text) {
       return NextResponse.json(
@@ -100,16 +110,64 @@ Example transformations:
 "photosynthesis" → "Plants eat sunlight! They use sunshine, air, and water to make their own food and grow."
 "perspicacious" → "Really good at noticing things and understanding what they mean."
 
-Simple explanation (do NOT repeat the original text):`
+Simple explanation (do NOT repeat the original text):`,
+
+      followup: `You are a helpful reading companion continuing a conversation about a text passage. The reader previously asked about this text and now has a follow-up question.
+
+Original text being discussed: "${originalText || text}"
+
+The reader's follow-up question: "${text}"
+
+Provide a helpful response that:
+- Directly addresses their question
+- References the original text when relevant
+- Keeps the explanation clear and concise
+- Maintains a friendly, conversational tone
+- Is brief (2-4 sentences max unless more detail is needed)
+
+Response:`
     };
 
-    const requestBody = {
-      contents: [{
+    // Build the request body - handle conversation history for follow-ups
+    let contents;
+
+    if (mode === 'followup' && conversationHistory && conversationHistory.length > 0) {
+      // Build multi-turn conversation
+      const systemContext = `You are a helpful reading companion. The user is reading a book and previously selected this text: "${originalText}". Continue helping them understand it.`;
+
+      contents = [
+        // System context as first user message
+        {
+          role: 'user',
+          parts: [{ text: systemContext }]
+        },
+        {
+          role: 'model',
+          parts: [{ text: 'I understand. I\'ll help explain and discuss this text with you.' }]
+        },
+        // Add conversation history
+        ...conversationHistory.map(msg => ({
+          role: msg.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: msg.content }]
+        })),
+        // Add current question
+        {
+          role: 'user',
+          parts: [{ text: text }]
+        }
+      ];
+    } else {
+      // Single-turn request (explain or eli5)
+      contents = [{
         role: 'user',
         parts: [{
           text: prompts[mode as keyof typeof prompts] || prompts.explain
         }]
-      }],
+      }];
+    }
+
+    const requestBody = {
+      contents,
       generationConfig: {
         temperature: 0.2,
         maxOutputTokens: 800,

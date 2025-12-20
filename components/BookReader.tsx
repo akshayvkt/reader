@@ -5,6 +5,8 @@ import ePub from 'epubjs';
 import type { Rendition, Contents } from 'epubjs';
 import { ChevronLeft, ChevronRight, Type, AlignJustify, AArrowUp, Maximize2, Minimize2 } from 'lucide-react';
 import Simplifier from './Simplifier';
+import { useChat } from '../contexts/ChatContext';
+import { ChatMessage } from '../types/chat';
 
 export interface BookReaderProps {
   bookData: ArrayBuffer;
@@ -42,6 +44,9 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
   const [selectedText, setSelectedText] = useState('');
   const [selectionPosition, setSelectionPosition] = useState({ x: 0, y: 0 });
   const [showSimplifier, setShowSimplifier] = useState(false);
+
+  // Chat integration
+  const { startConversation, setIsExpanded, isExpanded } = useChat();
   const [selectedFont, setSelectedFont] = useState(() => {
     return localStorage.getItem('reader-font-preference') || FONT_OPTIONS[0].value;
   });
@@ -97,30 +102,40 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
       const savedLineSpacing = localStorage.getItem('reader-line-spacing') || LINE_SPACING_OPTIONS[1].value;
       const savedFontSize = localStorage.getItem('reader-font-size') || FONT_SIZE_OPTIONS[1].value;
       
+        // Warm charcoal text color for book content
+        const textColor = '#2D2A26';
+
         rend.themes.default({
-        'body': { 
+        'body': {
           'font-family': savedFont,
           'line-height': savedLineSpacing,
-          'font-size': savedFontSize
+          'font-size': savedFontSize,
+          'color': textColor,
+          'background': '#FFFCF7'
         },
-        'p': { 
+        'p': {
           'font-family': savedFont,
           'line-height': savedLineSpacing,
-          'font-size': savedFontSize
+          'font-size': savedFontSize,
+          'color': textColor
         },
-        'div': { 
+        'div': {
           'font-family': savedFont,
-          'line-height': savedLineSpacing
+          'line-height': savedLineSpacing,
+          'color': textColor
         },
-        'span': { 
-          'font-family': savedFont
-        },
-        'h1, h2, h3, h4, h5, h6': { 
+        'span': {
           'font-family': savedFont,
-          'line-height': savedLineSpacing
+          'color': textColor
+        },
+        'h1, h2, h3, h4, h5, h6': {
+          'font-family': savedFont,
+          'line-height': savedLineSpacing,
+          'color': textColor
         },
         'li': {
-          'line-height': savedLineSpacing
+          'line-height': savedLineSpacing,
+          'color': textColor
         }
         });
 
@@ -220,30 +235,40 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
 
   const applyTypographySettings = useCallback(() => {
     if (rendition) {
+      // Warm charcoal text color for book content
+      const textColor = '#2D2A26';
+
       rendition.themes.default({
-        'body': { 
+        'body': {
           'font-family': selectedFont,
           'line-height': selectedLineSpacing,
-          'font-size': selectedFontSize
+          'font-size': selectedFontSize,
+          'color': textColor,
+          'background': '#FFFCF7'
         },
-        'p': { 
+        'p': {
           'font-family': selectedFont,
           'line-height': selectedLineSpacing,
-          'font-size': selectedFontSize
+          'font-size': selectedFontSize,
+          'color': textColor
         },
-        'div': { 
+        'div': {
           'font-family': selectedFont,
-          'line-height': selectedLineSpacing
+          'line-height': selectedLineSpacing,
+          'color': textColor
         },
-        'span': { 
-          'font-family': selectedFont
-        },
-        'h1, h2, h3, h4, h5, h6': { 
+        'span': {
           'font-family': selectedFont,
-          'line-height': selectedLineSpacing
+          'color': textColor
+        },
+        'h1, h2, h3, h4, h5, h6': {
+          'font-family': selectedFont,
+          'line-height': selectedLineSpacing,
+          'color': textColor
         },
         'li': {
-          'line-height': selectedLineSpacing
+          'line-height': selectedLineSpacing,
+          'color': textColor
         }
       });
     }
@@ -289,6 +314,37 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
       }
     }
   }, []);
+
+  // Handle expanding to chat panel
+  const handleExpandToChat = useCallback((originalText: string, messages: ChatMessage[]) => {
+    // Start the conversation in the chat context
+    if (messages.length > 0) {
+      startConversation(originalText, messages[0].content);
+      // Add remaining messages
+      messages.slice(1).forEach(() => {
+        // Note: We'd need to add these through the context, but for now just expand
+      });
+    }
+    setIsExpanded(true);
+    // Resize the epub rendition after the panel opens
+    setTimeout(() => {
+      if (renditionRef.current && viewerRef.current) {
+        const { width, height } = viewerRef.current.getBoundingClientRect();
+        renditionRef.current.resize(width, height);
+      }
+    }, 350);
+  }, [startConversation, setIsExpanded]);
+
+  // Resize epub when chat panel expands/collapses
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (renditionRef.current && viewerRef.current) {
+        const { width, height } = viewerRef.current.getBoundingClientRect();
+        renditionRef.current.resize(width, height);
+      }
+    }, 350);
+    return () => clearTimeout(timeout);
+  }, [isExpanded]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Skip if user is typing in an input or textarea
@@ -355,7 +411,7 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 flex flex-col outline-none"
+      className="h-full w-full flex flex-col outline-none"
       style={{ background: 'var(--background)' }}
       tabIndex={0}
       autoFocus
@@ -543,7 +599,7 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
         <div ref={viewerRef} className="w-full h-full" />
         
         {/* Visible navigation buttons at bottom */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4 z-10">
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4 z-10" style={{ position: 'absolute' }}>
           <button
             onClick={prevPage}
             className="p-2 rounded-full transition-all hover:scale-105"
@@ -581,6 +637,7 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
               });
             }
           }}
+          onExpand={handleExpandToChat}
         />
       )}
     </div>

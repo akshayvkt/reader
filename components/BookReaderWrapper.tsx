@@ -3,17 +3,25 @@
 import dynamic from 'next/dynamic';
 import { BookReaderProps } from './BookReader';
 import { PDFReaderProps } from './PDFReader';
+import { ChatProvider } from '../contexts/ChatContext';
+import ReaderLayout from './ReaderLayout';
+
+// Loading component with warm styling
+const LoadingSpinner = ({ message }: { message: string }) => (
+  <div
+    className="fixed inset-0 flex items-center justify-center"
+    style={{ background: 'var(--background)' }}
+  >
+    <div style={{ color: 'var(--foreground-muted)' }}>{message}</div>
+  </div>
+);
 
 // Dynamically import BookReader with no SSR
 const BookReader = dynamic(
   () => import('./BookReader'),
   {
     ssr: false,
-    loading: () => (
-      <div className="fixed inset-0 bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Loading reader...</div>
-      </div>
-    )
+    loading: () => <LoadingSpinner message="Loading reader..." />
   }
 );
 
@@ -22,11 +30,7 @@ const PDFReader = dynamic(
   () => import('./PDFReader'),
   {
     ssr: false,
-    loading: () => (
-      <div className="fixed inset-0 bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Loading PDF reader...</div>
-      </div>
-    )
+    loading: () => <LoadingSpinner message="Loading PDF reader..." />
   }
 );
 
@@ -43,11 +47,17 @@ type ReaderProps = BookReaderProps | PDFReaderProps;
 export default function BookReaderWrapper(props: ReaderProps) {
   const fileType = isPDF(props.bookData) ? 'pdf' : 'epub';
 
-  if (fileType === 'pdf') {
-    return <PDFReader {...props as PDFReaderProps} />;
-  }
-
-  return <BookReader {...props as BookReaderProps} />;
+  return (
+    <ChatProvider>
+      <ReaderLayout>
+        {fileType === 'pdf' ? (
+          <PDFReader {...props as PDFReaderProps} />
+        ) : (
+          <BookReader {...props as BookReaderProps} />
+        )}
+      </ReaderLayout>
+    </ChatProvider>
+  );
 }
 
 export type { BookReaderProps };
