@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import ePub from 'epubjs';
-import type { Rendition, Contents } from 'epubjs';
-import { ChevronLeft, ChevronRight, Settings, Type, AlignJustify, AArrowUp, Maximize2, Minimize2 } from 'lucide-react';
+import type { Rendition, Contents, TocItem } from 'epubjs';
+import { ChevronLeft, ChevronRight, Settings, Type, AlignJustify, AArrowUp, Maximize2, Minimize2, List } from 'lucide-react';
 import Simplifier from './Simplifier';
+import ChapterNav from './ChapterNav';
 import { useChat } from '../contexts/ChatContext';
 import { ChatMessage } from '../types/chat';
 
@@ -60,6 +61,13 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const selectionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Chapter navigation state
+  const [tableOfContents, setTableOfContents] = useState<TocItem[]>([]);
+  const [showChapterNav, setShowChapterNav] = useState(false);
+  const [currentHref, setCurrentHref] = useState('');
+  const [pageNumbers, setPageNumbers] = useState<Map<string, number>>(new Map());
+  const bookRef = useRef<ePub | null>(null);
+
   // Focus container on mount to enable keyboard shortcuts immediately
   useEffect(() => {
     containerRef.current?.focus();
@@ -93,9 +101,71 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
         console.log('Book displayed successfully');
         setRendition(rend);
         renditionRef.current = rend;
+        bookRef.current = book;
 
-      
-      // Apply saved typography preferences
+        // Extract table of contents
+        if (book.navigation && book.navigation.toc) {
+          setTableOfContents(book.navigation.toc);
+        }
+
+        // Generate locations for page numbers (in background)
+        const bookId = bookData.byteLength.toString();
+        const cachedLocations = localStorage.getItem(`book-locations-${bookId}`);
+
+        if (cachedLocations) {
+          try {
+            book.locations.load(cachedLocations);
+            generatePageNumbers(book);
+          } catch {
+            // Regenerate if cache is invalid
+            generateLocationsInBackground(book, bookId);
+          }
+        } else {
+          generateLocationsInBackground(book, bookId);
+        }
+
+        // Helper to generate locations in background
+        async function generateLocationsInBackground(book: ePub, bookId: string) {
+          try {
+            await book.locations.generate(1024);
+            localStorage.setItem(`book-locations-${bookId}`, book.locations.save());
+            generatePageNumbers(book);
+          } catch (error) {
+            console.error('Error generating locations:', error);
+          }
+        }
+
+        // Helper to calculate page numbers for TOC items
+        function generatePageNumbers(book: ePub) {
+          if (!book.navigation?.toc || !book.locations?.total) return;
+
+          const pages = new Map<string, number>();
+          const totalLocations = book.locations.total;
+
+          function processItems(items: TocItem[]) {
+            items.forEach((item) => {
+              try {
+                const spineItem = book.spine.get(item.href);
+                if (spineItem?.cfi) {
+                  const location = book.locations.locationFromCfi(spineItem.cfi);
+                  // Convert location to approximate page (assuming ~250 words per page)
+                  const pageNum = Math.max(1, Math.ceil((location / totalLocations) * Math.ceil(totalLocations / 3)));
+                  pages.set(item.href, pageNum);
+                }
+              } catch {
+                // Skip items that can't be resolved
+              }
+              if (item.subitems) {
+                processItems(item.subitems);
+              }
+            });
+          }
+
+          processItems(book.navigation.toc);
+          setPageNumbers(pages);
+        }
+
+        // Apply saved typography preferences
       const savedFont = localStorage.getItem('reader-font-preference') || FONT_OPTIONS[0].value;
       const savedLineSpacing = localStorage.getItem('reader-line-spacing') || LINE_SPACING_OPTIONS[1].value;
       const savedFontSize = localStorage.getItem('reader-font-size') || FONT_SIZE_OPTIONS[1].value;
@@ -206,16 +276,19 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
 
         rend.on('selected', handleSelection);
 
-        // Use a hash of the book data for localStorage key
-        const bookId = bookData.byteLength.toString();
+        // Use bookId (already defined above) for localStorage
         const savedLocation = localStorage.getItem(`book-location-${bookId}`);
         if (savedLocation && !isCleanedUp) {
           await rend.display(savedLocation);
         }
 
         rend.on('relocated', (location: unknown) => {
-          const loc = location as { start: { cfi: string } };
+          const loc = location as { start: { cfi: string; href: string } };
           localStorage.setItem(`book-location-${bookId}`, loc.start.cfi);
+          // Track current href for chapter highlighting
+          if (loc.start.href) {
+            setCurrentHref(loc.start.href);
+          }
         });
       } catch (error) {
         console.error('Error initializing book:', error);
@@ -325,6 +398,14 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
     }
   }, []);
 
+  // Handle chapter navigation
+  const handleChapterNavigate = useCallback((href: string) => {
+    if (renditionRef.current) {
+      renditionRef.current.display(href);
+      setShowChapterNav(false); // Auto-close after selection
+    }
+  }, []);
+
   // Handle expanding to chat panel
   const handleExpandToChat = useCallback((originalText: string, messages: ChatMessage[]) => {
     // Start the conversation in the chat context
@@ -382,14 +463,21 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
       e.preventDefault();
       toggleFullscreen();
     }
+    // T key for table of contents
+    if (e.key === 't' || e.key === 'T') {
+      e.preventDefault();
+      setShowChapterNav(prev => !prev);
+    }
     if (e.key === 'Escape') {
-      if (showSettingsMenu) {
+      if (showChapterNav) {
+        setShowChapterNav(false);
+      } else if (showSettingsMenu) {
         setShowSettingsMenu(false);
       } else {
         setShowSimplifier(false);
       }
     }
-  }, [showSettingsMenu, toggleFullscreen]);
+  }, [showSettingsMenu, showChapterNav, toggleFullscreen]);
 
   useEffect(() => {
     // Use capture phase (true) to catch events before they reach iframes
@@ -439,8 +527,21 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
           ← Back to Library
         </button>
 
-        {/* Collapsed Settings Menu (Apple Books style) */}
-        <div className="relative">
+        <div className="flex items-center gap-2">
+          {/* Table of Contents button */}
+          <button
+            onClick={() => setShowChapterNav(!showChapterNav)}
+            className="p-2 backdrop-blur rounded-lg transition-colors"
+            style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
+            aria-label="Table of Contents"
+          >
+            <List className="w-5 h-5" />
+          </button>
+
+          {/* Collapsed Settings Menu (Apple Books style) */}
+          <div className="relative">
           <button
             onClick={() => setShowSettingsMenu(!showSettingsMenu)}
             className="p-2 backdrop-blur rounded-lg transition-colors"
@@ -536,6 +637,7 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
               </div>
             </div>
           )}
+          </div>
         </div>
       </header>
 
@@ -584,6 +686,16 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
           onExpand={handleExpandToChat}
         />
       )}
+
+      {/* Chapter Navigation Sidebar */}
+      <ChapterNav
+        toc={tableOfContents}
+        currentHref={currentHref}
+        onNavigate={handleChapterNavigate}
+        onClose={() => setShowChapterNav(false)}
+        isOpen={showChapterNav}
+        pageNumbers={pageNumbers}
+      />
     </div>
   );
 }

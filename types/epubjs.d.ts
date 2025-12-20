@@ -13,7 +13,33 @@ declare module 'epubjs' {
       navigation: Promise<Navigation>;
       metadata: Promise<Metadata>;
     };
+    navigation: Navigation;
+    locations: Locations;
+    spine: Spine;
     package?: unknown;
+  }
+
+  export interface Locations {
+    generate(chars?: number): Promise<string[]>;
+    locationFromCfi(cfi: string): number;
+    cfiFromLocation(location: number): string;
+    cfiFromPercentage(percentage: number): string;
+    percentageFromCfi(cfi: string): number;
+    total: number;
+    save(): string;
+    load(locations: string): void;
+  }
+
+  export interface Spine {
+    get(target: string | number): SpineItem | undefined;
+    each(callback: (item: SpineItem, index: number) => void): void;
+    items: SpineItem[];
+  }
+
+  export interface SpineItem {
+    href: string;
+    cfi: string;
+    index: number;
   }
 
   export interface Rendition {
