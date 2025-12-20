@@ -329,6 +329,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
         const styles = getComputedStyle(document.documentElement);
         const textColor = styles.getPropertyValue('--foreground').trim();
         const backgroundColor = styles.getPropertyValue('--surface').trim();
+        const linkColor = styles.getPropertyValue('--link').trim();
 
         rend.themes.default({
         'body': {
@@ -361,6 +362,13 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
         'li': {
           'line-height': savedLineSpacing,
           'color': textColor
+        },
+        'a': {
+          'color': linkColor,
+          'text-decoration': 'none'
+        },
+        'a:hover': {
+          'text-decoration': 'underline'
         }
         });
 
@@ -528,13 +536,14 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
     return {
       textColor: styles.getPropertyValue('--foreground').trim(),
       backgroundColor: styles.getPropertyValue('--surface').trim(),
+      linkColor: styles.getPropertyValue('--link').trim(),
     };
   }, []);
 
   const applyTypographySettings = useCallback(() => {
     if (rendition) {
       // Get theme colors from CSS variables
-      const { textColor, backgroundColor } = getThemeColors();
+      const { textColor, backgroundColor, linkColor } = getThemeColors();
 
       rendition.themes.default({
         'body': {
@@ -567,6 +576,13 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
         'li': {
           'line-height': selectedLineSpacing,
           'color': textColor
+        },
+        'a': {
+          'color': linkColor,
+          'text-decoration': 'none'
+        },
+        'a:hover': {
+          'text-decoration': 'underline'
         }
       });
     }

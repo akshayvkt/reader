@@ -17,6 +17,9 @@
   --accent-light: #E8C4B5;
   --accent-subtle: #F5E6DE;
 
+  /* Link color - readable in light mode */
+  --link: #8B5A3C;
+
   /* Borders */
   --border: #E8E2D9;
   --border-subtle: #F0EBE3;
@@ -40,6 +43,9 @@
   --accent-light: #3D3530;
   --accent-subtle: #2E2A27;
 
+  /* Link color - softer for dark mode, easier on eyes */
+  --link: #C9A892;
+
   --border: #3A3632;
   --border-subtle: #2F2C29;
 }
@@ -60,6 +66,9 @@
     --accent-hover: #E0A08C;
     --accent-light: #3D3530;
     --accent-subtle: #2E2A27;
+
+    /* Link color - softer for dark mode */
+    --link: #C9A892;
 
     --border: #3A3632;
     --border-subtle: #2F2C29;
