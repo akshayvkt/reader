@@ -257,14 +257,15 @@ export default function ChatPanel() {
           // Attach ref to the last user message
           const isLastUserMessage = msg.role === 'user' &&
             !conversation.messages.slice(index + 1).some(m => m.role === 'user');
+          const isUser = msg.role === 'user';
           return (
             <div key={msg.id} ref={isLastUserMessage ? userMessageRef : null}>
-              <div className="text-xs font-medium mb-1" style={{ color: 'var(--accent)' }}>
-                {msg.role === 'user' ? 'You:' : 'Reader:'}
-              </div>
               <div
-                className="text-sm leading-relaxed"
-                style={{ color: 'var(--foreground)' }}
+                className={`text-sm leading-relaxed ${isUser ? 'px-4 py-3 rounded-2xl' : ''}`}
+                style={{
+                  color: 'var(--foreground)',
+                  background: isUser ? 'var(--background-muted)' : 'transparent',
+                }}
               >
                 <ReactMarkdown
                   components={{
