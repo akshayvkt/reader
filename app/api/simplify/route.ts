@@ -214,7 +214,7 @@ Response:`;
       contents,
       generationConfig: {
         temperature: 0.2,
-        maxOutputTokens: 800,
+        maxOutputTokens: 1200,
         topP: 0.95,
         topK: 40,
         thinkingConfig: {
