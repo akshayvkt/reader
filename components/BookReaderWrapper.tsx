@@ -1,10 +1,15 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { BookReaderProps } from './BookReader';
-import { PDFReaderProps } from './PDFReader';
 import { ChatProvider } from '../contexts/ChatContext';
 import ReaderLayout from './ReaderLayout';
+
+// Shared props for both readers
+export interface ReaderProps {
+  bookData: ArrayBuffer;
+  filePath?: string;
+  onClose: () => void;
+}
 
 // Loading component with warm styling
 const LoadingSpinner = ({ message }: { message: string }) => (
@@ -42,8 +47,6 @@ function isPDF(data: ArrayBuffer): boolean {
          view[2] === 0x44 && view[3] === 0x46;
 }
 
-type ReaderProps = BookReaderProps | PDFReaderProps;
-
 export default function BookReaderWrapper(props: ReaderProps) {
   const fileType = isPDF(props.bookData) ? 'pdf' : 'epub';
 
@@ -51,13 +54,11 @@ export default function BookReaderWrapper(props: ReaderProps) {
     <ChatProvider>
       <ReaderLayout>
         {fileType === 'pdf' ? (
-          <PDFReader {...props as PDFReaderProps} />
+          <PDFReader {...props} />
         ) : (
-          <BookReader {...props as BookReaderProps} />
+          <BookReader {...props} />
         )}
       </ReaderLayout>
     </ChatProvider>
   );
 }
-
-export type { BookReaderProps };

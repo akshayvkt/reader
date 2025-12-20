@@ -7,4 +7,5 @@ export interface RecentBook {
   progress: number;        // 0-100 percentage
   currentCfi?: string;     // reading position for EPUBs
   fileType: 'epub' | 'pdf';
+  filePath?: string;       // file path for Electron (allows reopening without file picker)
 }

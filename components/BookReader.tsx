@@ -12,16 +12,18 @@ import { addRecentBook, updateBookProgress } from '../lib/libraryStorage';
 
 export interface BookReaderProps {
   bookData: ArrayBuffer;
+  filePath?: string;
   onClose: () => void;
 }
 
 const FONT_OPTIONS = [
-  { name: 'Arial', value: 'Arial, sans-serif' },
-  { name: 'System Default', value: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' },
-  { name: 'Georgia', value: 'Georgia, serif' },
+  { name: 'Charter', value: 'Charter, "Bitstream Charter", Georgia, serif' },
   { name: 'Merriweather', value: '"Merriweather", Georgia, serif' },
-  { name: 'Open Dyslexic', value: '"OpenDyslexic", Arial, sans-serif' },
+  { name: 'Georgia', value: 'Georgia, serif' },
+  { name: 'System Default', value: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' },
+  { name: 'Arial', value: 'Arial, sans-serif' },
   { name: 'Times New Roman', value: '"Times New Roman", Times, serif' },
+  { name: 'Open Dyslexic', value: '"OpenDyslexic", Arial, sans-serif' },
 ];
 
 const LINE_SPACING_OPTIONS = [
@@ -38,7 +40,7 @@ const FONT_SIZE_OPTIONS = [
   { name: 'Extra Large', value: '20px' },
 ];
 
-export default function BookReader({ bookData, onClose }: BookReaderProps) {
+export default function BookReader({ bookData, filePath, onClose }: BookReaderProps) {
   const viewerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const renditionRef = useRef<Rendition | null>(null);
@@ -50,13 +52,13 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
   // Chat integration
   const { startConversation, setIsExpanded, isExpanded } = useChat();
   const [selectedFont, setSelectedFont] = useState(() => {
-    return localStorage.getItem('reader-font-preference') || FONT_OPTIONS[0].value;
+    return localStorage.getItem('reader-font-preference') || FONT_OPTIONS[0].value; // Charter
   });
   const [selectedLineSpacing, setSelectedLineSpacing] = useState(() => {
-    return localStorage.getItem('reader-line-spacing') || LINE_SPACING_OPTIONS[1].value;
+    return localStorage.getItem('reader-line-spacing') || LINE_SPACING_OPTIONS[2].value; // Relaxed (1.8)
   });
   const [selectedFontSize, setSelectedFontSize] = useState(() => {
-    return localStorage.getItem('reader-font-size') || FONT_SIZE_OPTIONS[1].value;
+    return localStorage.getItem('reader-font-size') || FONT_SIZE_OPTIONS[2].value; // Large (18px)
   });
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -146,6 +148,7 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
             lastOpened: Date.now(),
             progress: 0,
             fileType: 'epub',
+            filePath: filePath,
           });
         } catch (error) {
           console.error('Error saving book metadata:', error);
@@ -208,9 +211,9 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
         }
 
         // Apply saved typography preferences
-      const savedFont = localStorage.getItem('reader-font-preference') || FONT_OPTIONS[0].value;
-      const savedLineSpacing = localStorage.getItem('reader-line-spacing') || LINE_SPACING_OPTIONS[1].value;
-      const savedFontSize = localStorage.getItem('reader-font-size') || FONT_SIZE_OPTIONS[1].value;
+      const savedFont = localStorage.getItem('reader-font-preference') || FONT_OPTIONS[0].value; // Charter
+      const savedLineSpacing = localStorage.getItem('reader-line-spacing') || LINE_SPACING_OPTIONS[2].value; // Relaxed
+      const savedFontSize = localStorage.getItem('reader-font-size') || FONT_SIZE_OPTIONS[2].value; // Large
       
         // Warm charcoal text color for book content
         const textColor = '#2D2A26';
@@ -363,7 +366,7 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
         }
       }
     };
-  }, [bookData]);
+  }, [bookData, filePath]);
 
   const nextPage = useCallback(() => {
     renditionRef.current?.next();

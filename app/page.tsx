@@ -10,8 +10,10 @@ import { RecentBook } from '@/types/library';
 
 export default function Home() {
   const [bookData, setBookData] = useState<ArrayBuffer | null>(null);
+  const [currentFilePath, setCurrentFilePath] = useState<string | undefined>(undefined);
   const [isDragging, setIsDragging] = useState(false);
   const [recentBooks, setRecentBooks] = useState<RecentBook[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load recent books on mount
@@ -35,8 +37,39 @@ export default function Home() {
       return;
     }
 
+    // In Electron, File objects have a .path property
+    const filePath = file.path;
+
     const arrayBuffer = await file.arrayBuffer();
+    setCurrentFilePath(filePath);
+    setLoadError(null);
     setBookData(arrayBuffer);
+  }, []);
+
+  // Open a book from the recent books list
+  const openBook = useCallback(async (book: RecentBook) => {
+    // If we have a file path and we're in Electron, read the file directly
+    if (book.filePath && window.electronAPI) {
+      try {
+        // Check if file still exists
+        const exists = await window.electronAPI.fileExists(book.filePath);
+        if (!exists) {
+          setLoadError(`File not found: "${book.title}" may have been moved or deleted. Please add it again.`);
+          return;
+        }
+
+        const arrayBuffer = await window.electronAPI.readFile(book.filePath);
+        setCurrentFilePath(book.filePath);
+        setLoadError(null);
+        setBookData(arrayBuffer);
+      } catch (error) {
+        console.error('Error reading file:', error);
+        setLoadError(`Could not open "${book.title}". The file may have been moved or deleted.`);
+      }
+    } else {
+      // Fallback for browser or books without filePath: open file picker
+      openFilePicker();
+    }
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -67,7 +100,16 @@ export default function Home() {
   }, []);
 
   if (bookData) {
-    return <BookReaderWrapper bookData={bookData} onClose={() => setBookData(null)} />;
+    return (
+      <BookReaderWrapper
+        bookData={bookData}
+        filePath={currentFilePath}
+        onClose={() => {
+          setBookData(null);
+          setCurrentFilePath(undefined);
+        }}
+      />
+    );
   }
 
   const hasRecentBooks = recentBooks.length > 0;
@@ -127,13 +169,34 @@ export default function Home() {
           </button>
         </header>
 
+        {/* Error message when file can't be loaded */}
+        {loadError && (
+          <div
+            className="mb-6 p-4 rounded-lg"
+            style={{
+              background: 'var(--accent-subtle)',
+              border: '1px solid var(--accent)',
+              color: 'var(--foreground)',
+            }}
+          >
+            <p className="text-sm">{loadError}</p>
+            <button
+              onClick={() => setLoadError(null)}
+              className="mt-2 text-xs font-medium"
+              style={{ color: 'var(--accent)' }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {hasRecentBooks ? (
           <>
             {/* Hero: Continue Reading */}
             <section className="mb-12">
               <HeroBookCard
                 book={currentBook}
-                onClick={openFilePicker}
+                onClick={() => openBook(currentBook)}
               />
             </section>
 
@@ -155,7 +218,7 @@ export default function Home() {
                     <RecentBookCard
                       key={book.id}
                       book={book}
-                      onClick={openFilePicker}
+                      onClick={() => openBook(book)}
                       index={index}
                     />
                   ))}

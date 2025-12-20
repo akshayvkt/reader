@@ -13,10 +13,11 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 export interface PDFReaderProps {
   bookData: ArrayBuffer;
+  filePath?: string;
   onClose: () => void;
 }
 
-export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
+export default function PDFReader({ bookData, filePath, onClose }: PDFReaderProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
@@ -70,6 +71,7 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
             lastOpened: Date.now(),
             progress: 0,
             fileType: 'pdf',
+            filePath: filePath,
           });
         } catch {
           // Metadata extraction failed, save with defaults
@@ -81,6 +83,7 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
             lastOpened: Date.now(),
             progress: 0,
             fileType: 'pdf',
+            filePath: filePath,
           });
         }
 
@@ -95,7 +98,7 @@ export default function PDFReader({ bookData, onClose }: PDFReaderProps) {
     };
 
     loadPdf();
-  }, [bookData]);
+  }, [bookData, filePath]);
 
   // Render page
   const renderPage = useCallback(async (pageNum: number) => {
