@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { X } from 'lucide-react';
 import type { TocItem } from 'epubjs';
 
@@ -144,6 +144,16 @@ export default function ChapterNav({
   pageNumbers,
 }: ChapterNavProps) {
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const [isClosing, setIsClosing] = useState(false);
+
+  // Animated close handler
+  const handleClose = useCallback(() => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      onClose();
+    }, 200);
+  }, [onClose]);
 
   // Handle click outside to close
   useEffect(() => {
@@ -151,13 +161,13 @@ export default function ChapterNav({
 
     const handleClickOutside = (e: MouseEvent) => {
       if (sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
-        onClose();
+        handleClose();
       }
     };
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        handleClose();
       }
     };
 
@@ -171,7 +181,7 @@ export default function ChapterNav({
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, handleClose]);
 
   if (!isOpen) return null;
 
@@ -179,16 +189,16 @@ export default function ChapterNav({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 transition-opacity duration-200"
+        className={`fixed inset-0 z-40 ${isClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
         style={{ background: 'rgba(45, 42, 38, 0.3)' }}
-        onClick={onClose}
+        onClick={handleClose}
         aria-hidden="true"
       />
 
       {/* Sidebar */}
       <aside
         ref={sidebarRef}
-        className="fixed top-0 left-0 bottom-0 z-50 flex flex-col overflow-hidden animate-slide-in-left"
+        className={`fixed top-0 left-0 bottom-0 z-50 flex flex-col overflow-hidden ${isClosing ? 'animate-slide-out-left' : 'animate-slide-in-left'}`}
         style={{
           width: '280px',
           background: 'var(--surface)',
@@ -208,7 +218,7 @@ export default function ChapterNav({
             Contents
           </h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-1 rounded transition-colors"
             style={{ color: 'var(--foreground-muted)' }}
             onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
@@ -253,8 +263,35 @@ export default function ChapterNav({
             opacity: 1;
           }
         }
+        @keyframes slideOutLeft {
+          from {
+            transform: translateX(0);
+            opacity: 1;
+          }
+          to {
+            transform: translateX(-100%);
+            opacity: 0.8;
+          }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
         .animate-slide-in-left {
           animation: slideInLeft 200ms ease-out forwards;
+        }
+        .animate-slide-out-left {
+          animation: slideOutLeft 200ms ease-in forwards;
+        }
+        .animate-fade-in {
+          animation: fadeIn 200ms ease-out forwards;
+        }
+        .animate-fade-out {
+          animation: fadeOut 200ms ease-in forwards;
         }
       `}</style>
     </>
