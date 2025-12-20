@@ -6,13 +6,18 @@ interface ConversationMessage {
   content: string;
 }
 
+type ContextScope = 'highlight' | 'chapter' | 'book';
+
 export async function POST(request: NextRequest) {
   try {
-    const { text, mode = 'explain', conversationHistory, originalText } = await request.json() as {
+    const { text, mode = 'explain', conversationHistory, originalText, scope, scopeContext, chapterTitle } = await request.json() as {
       text: string;
       mode?: 'explain' | 'eli5' | 'followup';
       conversationHistory?: ConversationMessage[];
       originalText?: string;
+      scope?: ContextScope;
+      scopeContext?: string;
+      chapterTitle?: string;
     };
 
     if (!text) {
@@ -112,28 +117,59 @@ Example transformations:
 
 Simple explanation (do NOT repeat the original text):`,
 
-      followup: `You are a helpful reading companion continuing a conversation about a text passage. The reader previously asked about this text and now has a follow-up question.
+      followup: (() => {
+        // Build context-aware prompt based on scope
+        let contextSection = '';
+        if (scope === 'chapter' && scopeContext) {
+          contextSection = `
+You have access to the full chapter${chapterTitle ? ` ("${chapterTitle}")` : ''} for context:
+
+<chapter_context>
+${scopeContext.slice(0, 15000)}
+</chapter_context>
+
+`;
+        } else if (scope === 'book' && scopeContext) {
+          contextSection = `
+You have access to the book's content for context:
+
+<book_context>
+${scopeContext.slice(0, 30000)}
+</book_context>
+
+`;
+        }
+
+        return `You are a helpful reading companion continuing a conversation about a text passage. The reader previously asked about this text and now has a follow-up question.
 
 Original text being discussed: "${originalText || text}"
-
+${contextSection}
 The reader's follow-up question: "${text}"
 
 Provide a helpful response that:
 - Directly addresses their question
-- References the original text when relevant
+- References the original text when relevant${scope !== 'highlight' ? '\n- Draw on the broader context when it helps answer the question' : ''}
 - Keeps the explanation clear and concise
 - Maintains a friendly, conversational tone
 - Is brief (2-4 sentences max unless more detail is needed)
 
-Response:`
+Response:`;
+      })()
     };
 
     // Build the request body - handle conversation history for follow-ups
     let contents;
 
     if (mode === 'followup' && conversationHistory && conversationHistory.length > 0) {
-      // Build multi-turn conversation
-      const systemContext = `You are a helpful reading companion. The user is reading a book and previously selected this text: "${originalText}". Continue helping them understand it.`;
+      // Build context-aware system message based on scope
+      let contextInfo = '';
+      if (scope === 'chapter' && scopeContext) {
+        contextInfo = `\n\nYou have access to the full chapter${chapterTitle ? ` ("${chapterTitle}")` : ''} for additional context:\n\n${scopeContext.slice(0, 15000)}`;
+      } else if (scope === 'book' && scopeContext) {
+        contextInfo = `\n\nYou have access to the book's content for additional context:\n\n${scopeContext.slice(0, 30000)}`;
+      }
+
+      const systemContext = `You are a helpful reading companion. The user is reading a book and previously selected this text: "${originalText}". Continue helping them understand it.${contextInfo}`;
 
       contents = [
         // System context as first user message

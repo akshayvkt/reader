@@ -796,11 +796,106 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
     searchInputRef.current?.focus();
   }, []);
 
+  // Extract text from current chapter
+  const extractChapterText = useCallback(async (): Promise<{ text: string; title: string } | null> => {
+    if (!bookRef.current || !currentHref) return null;
+
+    try {
+      const book = bookRef.current;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const spine = book.spine as any;
+
+      // Find the spine item matching current href
+      for (const item of spine.spineItems) {
+        if (item.href === currentHref || currentHref.includes(item.href) || item.href.includes(currentHref.split('#')[0])) {
+          await item.load(book.load.bind(book));
+          const text = item.document?.body?.textContent?.trim() || '';
+          item.unload();
+
+          // Find chapter title from TOC
+          let title = 'Current Chapter';
+          const findTitle = (items: TocItem[]): string | null => {
+            for (const tocItem of items) {
+              const tocHref = tocItem.href.split('#')[0];
+              if (currentHref.includes(tocHref) || tocHref.includes(currentHref.split('#')[0])) {
+                return tocItem.label;
+              }
+              if (tocItem.subitems) {
+                const found = findTitle(tocItem.subitems);
+                if (found) return found;
+              }
+            }
+            return null;
+          };
+          title = findTitle(tableOfContents) || title;
+
+          return { text, title };
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Error extracting chapter text:', error);
+      return null;
+    }
+  }, [currentHref, tableOfContents]);
+
+  // Extract text from entire book (limited to prevent context overflow)
+  const extractBookText = useCallback(async (): Promise<string | null> => {
+    if (!bookRef.current) return null;
+
+    try {
+      const book = bookRef.current;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const spine = book.spine as any;
+      const allText: string[] = [];
+      const MAX_CHARS = 50000; // Limit to ~50k chars to avoid API limits
+      let totalChars = 0;
+
+      for (const item of spine.spineItems) {
+        if (totalChars >= MAX_CHARS) break;
+
+        try {
+          await item.load(book.load.bind(book));
+          const text = item.document?.body?.textContent?.trim() || '';
+          item.unload();
+
+          if (text) {
+            const remaining = MAX_CHARS - totalChars;
+            const truncatedText = text.slice(0, remaining);
+            allText.push(truncatedText);
+            totalChars += truncatedText.length;
+          }
+        } catch {
+          // Skip sections that fail to load
+          continue;
+        }
+      }
+
+      return allText.join('\n\n---\n\n');
+    } catch (error) {
+      console.error('Error extracting book text:', error);
+      return null;
+    }
+  }, []);
+
   // Handle expanding to chat panel
-  const handleExpandToChat = useCallback((originalText: string, messages: ChatMessage[]) => {
+  const handleExpandToChat = useCallback(async (originalText: string, messages: ChatMessage[]) => {
+    // Extract chapter and book text in parallel
+    const [chapterData, bookText] = await Promise.all([
+      extractChapterText(),
+      extractBookText(),
+    ]);
+
     // Start the conversation in the chat context with all existing messages
     if (messages.length > 0) {
-      startConversation(originalText, messages[0].content, undefined, messages);
+      startConversation({
+        originalText,
+        initialResponse: messages[0].content,
+        chapterText: chapterData?.text,
+        bookText: bookText || undefined,
+        chapterTitle: chapterData?.title,
+        existingMessages: messages,
+      });
     }
     setIsExpanded(true);
     // Resize the epub rendition after the panel opens
@@ -810,7 +905,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
         renditionRef.current.resize(width, height);
       }
     }, 350);
-  }, [startConversation, setIsExpanded]);
+  }, [startConversation, setIsExpanded, extractChapterText, extractBookText]);
 
   // Resize epub when chat panel expands/collapses
   useEffect(() => {

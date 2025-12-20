@@ -5,10 +5,15 @@ export interface ChatMessage {
   timestamp: number;
 }
 
+export type ContextScope = 'highlight' | 'chapter' | 'book';
+
 export interface ConversationContext {
   originalText: string;
-  bookContext?: string;
+  chapterText?: string;
+  bookText?: string;
+  chapterTitle?: string;
   messages: ChatMessage[];
+  scope: ContextScope;
 }
 
 export type SimplifyMode = 'explain' | 'eli5' | 'followup';

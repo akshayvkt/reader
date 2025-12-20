@@ -4,10 +4,16 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Send, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useChat } from '../contexts/ChatContext';
-import { ChatMessage } from '../types/chat';
+import { ChatMessage, ContextScope } from '../types/chat';
+
+const SCOPE_OPTIONS: { value: ContextScope; label: string }[] = [
+  { value: 'highlight', label: 'Highlight' },
+  { value: 'chapter', label: 'Chapter' },
+  { value: 'book', label: 'Whole Book' },
+];
 
 export default function ChatPanel() {
-  const { isExpanded, conversation, setIsExpanded, addMessage } = useChat();
+  const { isExpanded, conversation, setIsExpanded, addMessage, setScope } = useChat();
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -37,6 +43,14 @@ export default function ChatPanel() {
     setInput('');
     setSending(true);
 
+    // Determine the context based on scope
+    let scopeContext: string | undefined;
+    if (conversation.scope === 'chapter' && conversation.chapterText) {
+      scopeContext = conversation.chapterText;
+    } else if (conversation.scope === 'book' && conversation.bookText) {
+      scopeContext = conversation.bookText;
+    }
+
     try {
       const response = await fetch('/api/simplify', {
         method: 'POST',
@@ -49,6 +63,9 @@ export default function ChatPanel() {
             role: m.role,
             content: m.content,
           })),
+          scope: conversation.scope,
+          scopeContext,
+          chapterTitle: conversation.chapterTitle,
         }),
       });
 
@@ -114,6 +131,53 @@ export default function ChatPanel() {
         <p className="text-sm italic" style={{ color: 'var(--foreground-muted)' }}>
           &ldquo;{conversation.originalText}&rdquo;
         </p>
+      </div>
+
+      {/* Scope selector pills */}
+      <div
+        className="px-4 py-3 flex items-center gap-2"
+        style={{ borderBottom: '1px solid var(--border-subtle)' }}
+      >
+        <span className="text-xs" style={{ color: 'var(--foreground-muted)' }}>Context:</span>
+        <div
+          className="flex rounded-lg overflow-hidden"
+          style={{ border: '1px solid var(--border)' }}
+        >
+          {SCOPE_OPTIONS.map((option, index) => {
+            const isSelected = conversation.scope === option.value;
+            const isDisabled = (option.value === 'chapter' && !conversation.chapterText) ||
+                               (option.value === 'book' && !conversation.bookText);
+            return (
+              <button
+                key={option.value}
+                onClick={() => !isDisabled && setScope(option.value)}
+                disabled={isDisabled}
+                className="px-3 py-1.5 text-xs font-medium transition-all"
+                style={{
+                  background: isSelected ? 'var(--accent)' : 'transparent',
+                  color: isSelected ? 'white' : isDisabled ? 'var(--foreground-subtle)' : 'var(--foreground-muted)',
+                  borderRight: index < SCOPE_OPTIONS.length - 1 ? '1px solid var(--border)' : 'none',
+                  cursor: isDisabled ? 'not-allowed' : 'pointer',
+                  opacity: isDisabled ? 0.5 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected && !isDisabled) {
+                    e.currentTarget.style.background = 'var(--accent-subtle)';
+                    e.currentTarget.style.color = 'var(--accent)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected && !isDisabled) {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = 'var(--foreground-muted)';
+                  }
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Messages */}
