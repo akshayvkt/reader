@@ -901,12 +901,14 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
     }, 350);
   }, [startConversation, setIsExpanded, extractChapterText, extractBookText]);
 
-  // Resize epub when chat panel expands/collapses
+  // Resize epub and adjust spread when chat panel expands/collapses
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (renditionRef.current && viewerRef.current) {
         const { width, height } = viewerRef.current.getBoundingClientRect();
         renditionRef.current.resize(width, height);
+        // Single page when chat is open, auto-spread when closed
+        renditionRef.current.spread(isExpanded ? 'none' : 'auto');
       }
     }, 350);
     return () => clearTimeout(timeout);
