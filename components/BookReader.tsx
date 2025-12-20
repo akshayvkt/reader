@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import ePub from 'epubjs';
 import type { Rendition, Contents, TocItem } from 'epubjs';
-import { ChevronLeft, ChevronRight, Settings, Type, AlignJustify, AArrowUp, Maximize2, Minimize2, List } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Settings, Type, AlignJustify, Maximize2, Minimize2, List } from 'lucide-react';
 import Simplifier from './Simplifier';
 import ChapterNav from './ChapterNav';
 import { useChat } from '../contexts/ChatContext';
@@ -61,6 +61,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
     return localStorage.getItem('reader-font-size') || FONT_SIZE_OPTIONS[2].value; // Large (18px)
   });
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [showFontDropdown, setShowFontDropdown] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const selectionTimerRef = useRef<NodeJS.Timeout | null>(null);
   const settingsMenuRef = useRef<HTMLDivElement>(null);
@@ -84,6 +85,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
     const handleClickOutside = (e: MouseEvent) => {
       if (settingsMenuRef.current && !settingsMenuRef.current.contains(e.target as Node)) {
         setShowSettingsMenu(false);
+        setShowFontDropdown(false);
       }
     };
 
@@ -427,10 +429,23 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
     localStorage.setItem('reader-line-spacing', spacing);
   }, []);
 
-  const handleFontSizeChange = useCallback((size: string) => {
-    setSelectedFontSize(size);
-    localStorage.setItem('reader-font-size', size);
-  }, []);
+  const decreaseFontSize = useCallback(() => {
+    const currentIndex = FONT_SIZE_OPTIONS.findIndex(opt => opt.value === selectedFontSize);
+    if (currentIndex > 0) {
+      const newSize = FONT_SIZE_OPTIONS[currentIndex - 1].value;
+      setSelectedFontSize(newSize);
+      localStorage.setItem('reader-font-size', newSize);
+    }
+  }, [selectedFontSize]);
+
+  const increaseFontSize = useCallback(() => {
+    const currentIndex = FONT_SIZE_OPTIONS.findIndex(opt => opt.value === selectedFontSize);
+    if (currentIndex < FONT_SIZE_OPTIONS.length - 1) {
+      const newSize = FONT_SIZE_OPTIONS[currentIndex + 1].value;
+      setSelectedFontSize(newSize);
+      localStorage.setItem('reader-font-size', newSize);
+    }
+  }, [selectedFontSize]);
 
   // Apply typography settings whenever they change
   useEffect(() => {
@@ -625,48 +640,91 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
                 {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
               </button>
 
-              {/* Font Section */}
-              <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                <div className="text-xs font-medium mb-2 flex items-center gap-2" style={{ color: 'var(--foreground-muted)' }}>
-                  <Type className="w-3 h-3" /> Font
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {FONT_OPTIONS.map((font) => (
-                    <button
-                      key={font.name}
-                      onClick={() => handleFontChange(font.value)}
-                      className="px-2 py-1 text-xs rounded transition-colors"
-                      style={{
-                        background: selectedFont === font.value ? 'var(--accent)' : 'var(--background)',
-                        color: selectedFont === font.value ? 'white' : 'var(--foreground-muted)'
-                      }}
-                    >
-                      {font.name.split(' ')[0]}
-                    </button>
-                  ))}
-                </div>
+              {/* Font Section - Dropdown */}
+              <div className="px-4 py-3 relative" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <button
+                  onClick={() => setShowFontDropdown(!showFontDropdown)}
+                  className="w-full flex items-center justify-between py-1 transition-colors"
+                  style={{ color: 'var(--foreground)' }}
+                >
+                  <div className="flex items-center gap-2">
+                    <Type className="w-4 h-4" style={{ color: 'var(--foreground-muted)' }} />
+                    <span className="text-sm">Font</span>
+                  </div>
+                  <span className="text-sm" style={{ color: 'var(--foreground-muted)' }}>
+                    {FONT_OPTIONS.find(f => f.value === selectedFont)?.name || 'Charter'}
+                  </span>
+                </button>
+
+                {/* Font Dropdown */}
+                {showFontDropdown && (
+                  <div
+                    className="absolute left-0 right-0 bottom-full mb-1 mx-2 rounded-lg overflow-hidden"
+                    style={{
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      boxShadow: '0 -4px 16px rgba(45, 42, 38, 0.15)',
+                    }}
+                  >
+                    {FONT_OPTIONS.map((font) => (
+                      <button
+                        key={font.name}
+                        onClick={() => {
+                          handleFontChange(font.value);
+                          setShowFontDropdown(false);
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm transition-colors"
+                        style={{
+                          background: selectedFont === font.value ? 'var(--accent-subtle)' : 'transparent',
+                          color: selectedFont === font.value ? 'var(--accent)' : 'var(--foreground)',
+                          fontFamily: font.value,
+                        }}
+                        onMouseEnter={(e) => {
+                          if (selectedFont !== font.value) {
+                            e.currentTarget.style.background = 'var(--background-muted)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (selectedFont !== font.value) {
+                            e.currentTarget.style.background = 'transparent';
+                          }
+                        }}
+                      >
+                        {font.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Size Section */}
-              <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                <div className="text-xs font-medium mb-2 flex items-center gap-2" style={{ color: 'var(--foreground-muted)' }}>
-                  <AArrowUp className="w-3 h-3" /> Size
-                </div>
-                <div className="flex gap-1">
-                  {FONT_SIZE_OPTIONS.map((size) => (
-                    <button
-                      key={size.name}
-                      onClick={() => handleFontSizeChange(size.value)}
-                      className="px-2 py-1 text-xs rounded transition-colors"
-                      style={{
-                        background: selectedFontSize === size.value ? 'var(--accent)' : 'var(--background)',
-                        color: selectedFontSize === size.value ? 'white' : 'var(--foreground-muted)'
-                      }}
-                    >
-                      {size.name}
-                    </button>
-                  ))}
-                </div>
+              {/* Size Section - Apple Books style A/A */}
+              <div className="px-4 py-3 flex items-center justify-center gap-6" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <button
+                  onClick={decreaseFontSize}
+                  disabled={selectedFontSize === FONT_SIZE_OPTIONS[0].value}
+                  className="px-3 py-2 rounded-lg transition-colors disabled:opacity-30"
+                  style={{
+                    background: 'var(--background)',
+                    color: 'var(--foreground)',
+                    fontFamily: 'Charter, Georgia, serif',
+                    fontSize: '14px',
+                  }}
+                >
+                  A
+                </button>
+                <button
+                  onClick={increaseFontSize}
+                  disabled={selectedFontSize === FONT_SIZE_OPTIONS[FONT_SIZE_OPTIONS.length - 1].value}
+                  className="px-3 py-2 rounded-lg transition-colors disabled:opacity-30"
+                  style={{
+                    background: 'var(--background)',
+                    color: 'var(--foreground)',
+                    fontFamily: 'Charter, Georgia, serif',
+                    fontSize: '20px',
+                  }}
+                >
+                  A
+                </button>
               </div>
 
               {/* Spacing Section */}
