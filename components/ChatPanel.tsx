@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, Loader2 } from 'lucide-react';
+import { X, ArrowUp, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useChat } from '../contexts/ChatContext';
 import { ChatMessage, ContextScope } from '../types/chat';
@@ -217,10 +217,7 @@ export default function ChatPanel() {
       </div>
 
       {/* Input */}
-      <div
-        className="px-4 py-3"
-        style={{ borderTop: '1px solid var(--border)' }}
-      >
+      <div className="px-4 py-3">
         <div className="flex gap-2">
           <input
             ref={inputRef}
@@ -248,7 +245,7 @@ export default function ChatPanel() {
             className="px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
             style={{ background: 'var(--accent)', color: 'white' }}
           >
-            <Send className="w-4 h-4" />
+            <ArrowUp className="w-4 h-4" />
           </button>
         </div>
       </div>
