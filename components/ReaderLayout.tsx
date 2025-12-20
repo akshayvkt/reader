@@ -25,14 +25,26 @@ export default function ReaderLayout({ children, onResize }: ReaderLayoutProps) 
   });
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const chatWidthRef = useRef(chatWidth);
 
-  // Handle drag to resize
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  // Keep ref in sync with state
+  useEffect(() => {
+    chatWidthRef.current = chatWidth;
+  }, [chatWidth]);
+
+  // Handle drag to resize using pointer events with capture
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    console.log('[Divider] pointerdown fired');
     e.preventDefault();
+
+    // Capture pointer - this ensures we get all pointer events even over iframes
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
     setIsDragging(true);
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
   }, []);
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!isDragging || !containerRef.current) return;
 
     const containerRect = containerRef.current.getBoundingClientRect();
@@ -44,38 +56,29 @@ export default function ReaderLayout({ children, onResize }: ReaderLayoutProps) 
 
     // Clamp to min/max
     const clampedWidth = Math.min(MAX_CHAT_WIDTH, Math.max(MIN_CHAT_WIDTH, newChatWidth));
+    console.log('[Divider] pointermove - newWidth:', clampedWidth.toFixed(1) + '%');
     setChatWidth(clampedWidth);
+    chatWidthRef.current = clampedWidth;
   }, [isDragging]);
 
-  const handleMouseUp = useCallback(() => {
-    if (isDragging) {
-      setIsDragging(false);
-      // Save to localStorage
-      localStorage.setItem('reader-chat-width', chatWidth.toString());
-      // Trigger resize for epub
-      if (onResize) {
-        onResize();
-      }
-    }
-  }, [isDragging, chatWidth, onResize]);
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    console.log('[Divider] pointerup fired');
 
-  // Add/remove global mouse listeners for dragging
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-      // Prevent text selection while dragging
-      document.body.style.userSelect = 'none';
-      document.body.style.cursor = 'col-resize';
+    // Release pointer capture
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    setIsDragging(false);
+
+    // Save to localStorage
+    localStorage.setItem('reader-chat-width', chatWidthRef.current.toString());
+
+    // Trigger resize for epub
+    if (onResize) {
+      onResize();
     }
 
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.userSelect = '';
-      document.body.style.cursor = '';
-    };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+  }, [onResize]);
 
   // Notify parent when layout changes (for epub/pdf resize)
   useEffect(() => {
@@ -128,12 +131,17 @@ export default function ReaderLayout({ children, onResize }: ReaderLayoutProps) 
       {/* Draggable divider */}
       {isExpanded && (
         <div
-          onMouseDown={handleMouseDown}
-          className="w-1 h-full cursor-col-resize hover:bg-[var(--accent)] transition-colors relative group"
-          style={{ background: isDragging ? 'var(--accent)' : 'var(--border)' }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          className="w-3 h-full cursor-col-resize flex items-center justify-center touch-none"
+          style={{ background: 'transparent' }}
         >
-          {/* Wider invisible hit area */}
-          <div className="absolute inset-y-0 -left-1 -right-1" />
+          {/* Visual divider line */}
+          <div
+            className="w-1 h-full pointer-events-none transition-colors"
+            style={{ background: isDragging ? 'var(--accent)' : 'var(--border)' }}
+          />
         </div>
       )}
 

@@ -903,12 +903,19 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
 
   // Resize epub and adjust spread when chat panel expands/collapses
   useEffect(() => {
+    console.log('[Spread] Effect triggered, isExpanded:', isExpanded);
     const timeout = setTimeout(() => {
+      console.log('[Spread] Timeout fired, checking refs...');
       if (renditionRef.current && viewerRef.current) {
         const { width, height } = viewerRef.current.getBoundingClientRect();
+        console.log('[Spread] Resizing to:', width, 'x', height);
         renditionRef.current.resize(width, height);
         // Single page when chat is open, auto-spread when closed
-        renditionRef.current.spread(isExpanded ? 'none' : 'auto');
+        const spreadMode = isExpanded ? 'none' : 'auto';
+        console.log('[Spread] Setting spread to:', spreadMode);
+        renditionRef.current.spread(spreadMode);
+      } else {
+        console.log('[Spread] Missing refs - rendition:', !!renditionRef.current, 'viewer:', !!viewerRef.current);
       }
     }, 350);
     return () => clearTimeout(timeout);
