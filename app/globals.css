@@ -17,8 +17,8 @@
   --accent-light: #E8C4B5;
   --accent-subtle: #F5E6DE;
 
-  /* Link color - readable in light mode */
-  --link: #8B5A3C;
+  /* Link color - distinct from text in light mode */
+  --link: #2E7D6B;
 
   /* Borders */
   --border: #E8E2D9;
