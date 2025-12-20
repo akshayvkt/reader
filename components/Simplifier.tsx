@@ -277,10 +277,13 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
           {/* Messages */}
           <div className="text-sm leading-relaxed overflow-y-auto max-h-[300px] px-4 py-2" style={{ color: 'var(--foreground)' }}>
             {messages.map((msg, index) => (
-              <div key={msg.id} className={index > 0 ? 'mt-3 pt-3' : ''} style={{ borderTop: index > 0 ? '1px solid var(--border-subtle)' : 'none' }}>
-                <div className="text-xs font-medium mb-1" style={{ color: 'var(--accent)' }}>
-                  {msg.role === 'user' ? 'You:' : 'Reader:'}
-                </div>
+              <div key={msg.id} className={index > 0 ? 'mt-3' : ''}>
+                {/* Only show labels for follow-up messages (index > 0) */}
+                {index > 0 && (
+                  <div className="text-xs font-medium mb-1" style={{ color: msg.role === 'user' ? 'var(--foreground-muted)' : 'var(--accent)' }}>
+                    {msg.role === 'user' ? 'You:' : 'Reader:'}
+                  </div>
+                )}
                 <ReactMarkdown
                   components={{
                     strong: ({ children }) => <strong className="font-medium">{children}</strong>,
@@ -293,7 +296,7 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
               </div>
             ))}
             {sendingFollowUp && (
-              <div className="mt-3 pt-3 flex items-center gap-2" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+              <div className="mt-3 flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--accent)' }} />
                 <span style={{ color: 'var(--foreground-muted)' }}>Thinking...</span>
               </div>
@@ -301,7 +304,7 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
           </div>
 
           {/* Follow-up input */}
-          <div className="px-4 py-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+          <div className="px-4 py-3">
             <div className="flex gap-2">
               <input
                 ref={inputRef}
