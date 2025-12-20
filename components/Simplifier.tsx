@@ -332,6 +332,7 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
                     ol: ({ children }) => <ol className="list-decimal ml-4 my-2">{children}</ol>,
                     li: ({ children }) => <li className="mb-1">{children}</li>,
                     p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                    hr: () => <hr className="my-4 border-t" style={{ borderColor: 'var(--border)' }} />,
                   }}
                 >
                   {msg.content}

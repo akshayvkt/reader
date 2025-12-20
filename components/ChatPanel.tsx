@@ -23,12 +23,36 @@ export default function ChatPanel() {
 
   // Scroll to user message when flag is set
   useEffect(() => {
-    if (shouldScrollToUserMessage.current && userMessageRef.current) {
-      // Small delay to ensure DOM is updated
-      setTimeout(() => {
-        userMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 10);
+    if (shouldScrollToUserMessage.current && userMessageRef.current && messagesContainerRef.current) {
       shouldScrollToUserMessage.current = false;
+
+      // Wait for next frame to ensure DOM is fully updated
+      requestAnimationFrame(() => {
+        const container = messagesContainerRef.current;
+        const message = userMessageRef.current;
+        if (container && message) {
+          // Use getBoundingClientRect for accurate positioning
+          const containerRect = container.getBoundingClientRect();
+          const messageRect = message.getBoundingClientRect();
+
+          // Distance from message to top of visible container area
+          const distanceFromTop = messageRect.top - containerRect.top;
+
+          // Add to current scroll to get target position
+          const scrollTarget = container.scrollTop + distanceFromTop;
+
+          console.log('=== Scroll Debug ===');
+          console.log('Distance from top:', distanceFromTop);
+          console.log('Current scrollTop:', container.scrollTop);
+          console.log('Scroll target:', scrollTarget);
+
+          container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
+
+          setTimeout(() => {
+            console.log('ScrollTop after:', container.scrollTop);
+          }, 500);
+        }
+      });
     }
   }, [conversation?.messages]);
 
@@ -215,6 +239,7 @@ export default function ChatPanel() {
                     ol: ({ children }) => <ol className="list-decimal ml-4 my-2">{children}</ol>,
                     li: ({ children }) => <li className="mb-1">{children}</li>,
                     p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                    hr: () => <hr className="my-4 border-t" style={{ borderColor: 'var(--border)' }} />,
                   }}
                 >
                   {msg.content}
