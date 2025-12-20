@@ -246,7 +246,7 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
             e.currentTarget.style.color = 'var(--foreground-subtle)';
             e.currentTarget.style.background = 'transparent';
           }}
-          title="Expand to chat"
+          title="Expand"
         >
           <Maximize2 className="w-3.5 h-3.5" />
         </button>
@@ -297,7 +297,11 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
           {/* Messages */}
           <div className="text-sm leading-relaxed overflow-y-auto max-h-[300px] px-4 py-2" style={{ color: 'var(--foreground)' }}>
             {messages.map((msg, index) => (
-              <div key={msg.id} className={index > 0 ? 'mt-3' : ''}>
+              <div
+                key={msg.id}
+                className={index > 0 ? 'mt-3' : ''}
+                style={index === 0 ? { borderLeft: '2px solid var(--accent)', paddingLeft: '12px' } : {}}
+              >
                 {/* Only show labels for follow-up messages (index > 0) */}
                 {index > 0 && (
                   <div className="text-xs font-medium mb-1" style={{ color: msg.role === 'user' ? 'var(--foreground-muted)' : 'var(--accent)' }}>
