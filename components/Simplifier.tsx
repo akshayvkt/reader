@@ -299,14 +299,23 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
         </div>
       ) : (
         <div className="max-w-md">
+          {/* Highlighted text */}
+          <div
+            className="px-4 py-2 text-sm italic"
+            style={{
+              borderLeft: '2px solid var(--accent)',
+              marginLeft: '16px',
+              paddingLeft: '12px',
+              color: 'var(--foreground-muted)',
+            }}
+          >
+            &ldquo;{text}&rdquo;
+          </div>
+
           {/* Messages */}
           <div className="text-sm leading-relaxed overflow-y-auto max-h-[300px] px-4 py-2" style={{ color: 'var(--foreground)' }}>
             {messages.map((msg, index) => (
-              <div
-                key={msg.id}
-                className={index > 0 ? 'mt-3' : ''}
-                style={index === 0 ? { borderLeft: '2px solid var(--accent)', paddingLeft: '12px' } : {}}
-              >
+              <div key={msg.id} className={index > 0 ? 'mt-3' : ''}>
                 {/* Only show labels for follow-up messages (index > 0) */}
                 {index > 0 && (
                   <div className="text-xs font-medium mb-1" style={{ color: msg.role === 'user' ? 'var(--foreground-muted)' : 'var(--accent)' }}>
