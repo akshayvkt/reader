@@ -57,35 +57,38 @@ export default function ChatPanel() {
     }
   }, [conversation?.messages]);
 
-  // Calculate dynamic padding after AI responds
+  // Calculate dynamic padding after AI responds - no scrolling, just update padding
   useEffect(() => {
-    if (!sending && userMessageRef.current && messagesContainerRef.current) {
-      requestAnimationFrame(() => {
-        const container = messagesContainerRef.current;
-        const userMessage = userMessageRef.current;
-        if (!container || !userMessage) return;
+    // Only run when not sending and we have messages
+    if (sending || !conversation?.messages?.length) return;
 
-        const containerHeight = container.clientHeight;
-        const userMessageRect = userMessage.getBoundingClientRect();
+    // Only recalculate when last message is from AI (just received response)
+    const lastMessage = conversation.messages[conversation.messages.length - 1];
+    if (lastMessage.role !== 'assistant') return;
 
-        // Get the next sibling (AI response) if it exists
-        const aiResponse = userMessage.nextElementSibling as HTMLElement | null;
-        const aiResponseHeight = aiResponse?.offsetHeight || 0;
+    // Wait for DOM to be fully updated
+    const timer = setTimeout(() => {
+      const container = messagesContainerRef.current;
+      const userMessage = userMessageRef.current;
+      if (!container || !userMessage) return;
 
-        const contentHeight = userMessageRect.height + aiResponseHeight + 32; // 32px for spacing
-        const neededPadding = Math.max(0, containerHeight - contentHeight);
+      const containerHeight = container.clientHeight;
+      const userMsgHeight = userMessage.offsetHeight;
 
-        setDynamicPadding(neededPadding);
-      });
-    }
+      // Get the next sibling (AI response) if it exists
+      const aiResponse = userMessage.nextElementSibling as HTMLElement | null;
+      const aiResponseHeight = aiResponse?.offsetHeight || 0;
+
+      // Total content height from user message through AI response + spacing
+      const contentHeight = userMsgHeight + aiResponseHeight + 32;
+      const neededPadding = Math.max(0, containerHeight - contentHeight);
+
+      // Just update padding - scroll position stays exactly where it is
+      setDynamicPadding(neededPadding);
+    }, 50);
+
+    return () => clearTimeout(timer);
   }, [sending, conversation?.messages]);
-
-  // Reset padding when starting new message
-  useEffect(() => {
-    if (sending) {
-      setDynamicPadding(0);
-    }
-  }, [sending]);
 
   // Focus input when panel opens
   useEffect(() => {
@@ -104,6 +107,9 @@ export default function ChatPanel() {
 
     // Flag to scroll to this user message after it renders
     shouldScrollToUserMessage.current = true;
+
+    // Set large padding immediately to allow scrolling user message to top
+    setDynamicPadding(window.innerHeight);
 
     addMessage(userMessage);
     setInput('');
@@ -247,7 +253,7 @@ export default function ChatPanel() {
       </div>
 
       {/* Messages - dynamic bottom padding to allow scrolling user message to top */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ paddingBottom: sending ? '60vh' : dynamicPadding > 0 ? `${dynamicPadding}px` : undefined }}>
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ paddingBottom: dynamicPadding > 0 ? `${dynamicPadding}px` : undefined }}>
         {conversation.messages.map((msg, index) => {
           // Attach ref to the last user message
           const isLastUserMessage = msg.role === 'user' &&
