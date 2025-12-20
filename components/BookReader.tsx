@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import ePub from 'epubjs';
 import type { Rendition, Contents, TocItem } from 'epubjs';
-import { ChevronLeft, ChevronRight, Settings, Type, AlignJustify, Maximize2, Minimize2, List } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Settings, Type, AlignJustify, Maximize2, Minimize2, List, Search, X } from 'lucide-react';
 import Simplifier from './Simplifier';
 import ChapterNav from './ChapterNav';
 import { useChat } from '../contexts/ChatContext';
@@ -42,6 +42,13 @@ const FONT_SIZE_OPTIONS = [
   { name: 'Largest', value: '24px' },
 ];
 
+interface SearchResult {
+  cfi: string;
+  excerpt: string;
+  chapterTitle: string;
+  pageNumber?: number;
+}
+
 export default function BookReader({ bookData, filePath, onClose }: BookReaderProps) {
   const viewerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -77,6 +84,15 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
   const [pageNumbers, setPageNumbers] = useState<Map<string, number>>(new Map());
   const bookRef = useRef<ePub | null>(null);
 
+  // Search state
+  const [showSearchPanel, setShowSearchPanel] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchPanelRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
   // Focus container on mount to enable keyboard shortcuts immediately
   useEffect(() => {
     containerRef.current?.focus();
@@ -102,6 +118,33 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showSettingsMenu]);
+
+  // Close search panel when clicking outside
+  useEffect(() => {
+    if (!showSearchPanel) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchPanelRef.current && !searchPanelRef.current.contains(e.target as Node)) {
+        setShowSearchPanel(false);
+      }
+    };
+
+    // Small delay to prevent immediate close on the same click that opened it
+    setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 10);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSearchPanel]);
+
+  // Auto-focus search input when panel opens
+  useEffect(() => {
+    if (showSearchPanel && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [showSearchPanel]);
 
   useEffect(() => {
     if (!viewerRef.current || !bookData) return;
@@ -366,6 +409,9 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
       if (sizeDotsTimerRef.current) {
         clearTimeout(sizeDotsTimerRef.current);
       }
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
       renditionRef.current = null;
       if (rend) {
         try {
@@ -497,6 +543,115 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
     }
   }, []);
 
+  // Helper to find chapter title from CFI
+  const getChapterTitleFromCfi = useCallback((cfi: string): string => {
+    if (!bookRef.current || !tableOfContents.length) return 'Unknown';
+
+    try {
+      // Extract the spine item index from CFI (format: epubcfi(/6/N!...))
+      const match = cfi.match(/epubcfi\(\/6\/(\d+)/);
+      if (!match) return 'Unknown';
+
+      const spineIndex = Math.floor(parseInt(match[1]) / 2) - 1;
+      const spineItem = bookRef.current.spine.get(spineIndex);
+      if (!spineItem) return 'Unknown';
+
+      const href = spineItem.href;
+
+      // Search TOC for matching href
+      const findInToc = (items: TocItem[]): string | null => {
+        for (const item of items) {
+          const itemHref = item.href.split('#')[0];
+          if (href.includes(itemHref) || itemHref.includes(href)) {
+            return item.label;
+          }
+          if (item.subitems) {
+            const found = findInToc(item.subitems);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+
+      return findInToc(tableOfContents) || 'Unknown';
+    } catch {
+      return 'Unknown';
+    }
+  }, [tableOfContents]);
+
+  // Search function with debounce
+  const performSearch = useCallback(async (query: string) => {
+    if (!bookRef.current || query.length < 3) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const results = await (bookRef.current as any).search(query);
+
+      // Map results to include chapter titles, limit to 50
+      const mappedResults: SearchResult[] = results.slice(0, 50).map((result: { cfi: string; excerpt: string }) => ({
+        cfi: result.cfi,
+        excerpt: result.excerpt,
+        chapterTitle: getChapterTitleFromCfi(result.cfi),
+        pageNumber: undefined, // Could add page number lookup here if needed
+      }));
+
+      setSearchResults(mappedResults);
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [getChapterTitleFromCfi]);
+
+  // Handle search input change with debounce
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+
+    // Clear existing debounce timer
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    if (value.length < 3) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    // Set searching state immediately for feedback
+    setIsSearching(true);
+
+    // Debounce the actual search
+    searchDebounceRef.current = setTimeout(() => {
+      performSearch(value);
+    }, 300);
+  }, [performSearch]);
+
+  // Handle clicking a search result
+  const handleSearchResultClick = useCallback((cfi: string) => {
+    if (renditionRef.current) {
+      renditionRef.current.display(cfi);
+      setShowSearchPanel(false);
+      setSearchQuery('');
+      setSearchResults([]);
+    }
+  }, []);
+
+  // Clear search
+  const clearSearch = useCallback(() => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setIsSearching(false);
+    searchInputRef.current?.focus();
+  }, []);
+
   // Handle expanding to chat panel
   const handleExpandToChat = useCallback((originalText: string, messages: ChatMessage[]) => {
     // Start the conversation in the chat context
@@ -529,9 +684,27 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
   }, [isExpanded]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    // Skip if user is typing in an input or textarea
     const target = e.target as HTMLElement;
-    if (target instanceof HTMLInputElement || 
+
+    // Handle Escape key even when in input (to close search panel)
+    if (e.key === 'Escape') {
+      if (showSearchPanel) {
+        setShowSearchPanel(false);
+        setSearchQuery('');
+        setSearchResults([]);
+        containerRef.current?.focus();
+      } else if (showChapterNav) {
+        setShowChapterNav(false);
+      } else if (showSettingsMenu) {
+        setShowSettingsMenu(false);
+      } else {
+        setShowSimplifier(false);
+      }
+      return;
+    }
+
+    // Skip other keys if user is typing in an input or textarea
+    if (target instanceof HTMLInputElement ||
         target instanceof HTMLTextAreaElement) {
       return;
     }
@@ -559,16 +732,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
       e.preventDefault();
       setShowChapterNav(prev => !prev);
     }
-    if (e.key === 'Escape') {
-      if (showChapterNav) {
-        setShowChapterNav(false);
-      } else if (showSettingsMenu) {
-        setShowSettingsMenu(false);
-      } else {
-        setShowSimplifier(false);
-      }
-    }
-  }, [showSettingsMenu, showChapterNav, toggleFullscreen]);
+  }, [showSettingsMenu, showChapterNav, showSearchPanel, toggleFullscreen]);
 
   useEffect(() => {
     // Use capture phase (true) to catch events before they reach iframes
@@ -632,18 +796,117 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
           </button>
         </div>
 
-        {/* Collapsed Settings Menu (Apple Books style) */}
-        <div className="relative" ref={settingsMenuRef}>
-          <button
-            onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-            className="p-2 backdrop-blur rounded-lg transition-colors"
-            style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
-            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
-            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
-            aria-label="Settings"
-          >
-            <Settings className="w-5 h-5" />
-          </button>
+        {/* Search and Settings */}
+        <div className="flex items-center gap-2">
+          {/* Search */}
+          <div className="relative" ref={searchPanelRef}>
+            <button
+              onClick={() => setShowSearchPanel(!showSearchPanel)}
+              className="p-2 backdrop-blur rounded-lg transition-colors"
+              style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
+              aria-label="Search"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+
+            {showSearchPanel && (
+              <div
+                className="absolute top-full right-0 mt-2 w-80 backdrop-blur-lg rounded-lg"
+                style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(45, 42, 38, 0.15)' }}
+              >
+                {/* Search Input */}
+                <div className="p-3 flex items-center gap-2" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                  <Search className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--foreground-muted)' }} />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    placeholder="Search in book"
+                    className="flex-1 bg-transparent text-sm outline-none"
+                    style={{ color: 'var(--foreground)' }}
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={clearSearch}
+                      className="p-1 rounded-full transition-colors"
+                      style={{ color: 'var(--foreground-muted)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Search Results */}
+                <div className="max-h-80 overflow-y-auto">
+                  {isSearching ? (
+                    <div className="px-4 py-8 text-center">
+                      <div className="text-sm" style={{ color: 'var(--foreground-muted)' }}>
+                        Searching...
+                      </div>
+                    </div>
+                  ) : searchQuery.length > 0 && searchQuery.length < 3 ? (
+                    <div className="px-4 py-8 text-center">
+                      <div className="text-sm" style={{ color: 'var(--foreground-muted)' }}>
+                        Type at least 3 characters
+                      </div>
+                    </div>
+                  ) : searchResults.length > 0 ? (
+                    searchResults.map((result, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleSearchResultClick(result.cfi)}
+                        className="w-full px-4 py-3 text-left transition-colors"
+                        style={{ borderBottom: '1px solid var(--border-subtle)' }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--background-muted)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="text-sm font-medium truncate" style={{ color: 'var(--foreground)' }}>
+                            {result.chapterTitle}
+                          </div>
+                          {result.pageNumber && (
+                            <div className="text-xs flex-shrink-0" style={{ color: 'var(--foreground-muted)' }}>
+                              {result.pageNumber}
+                            </div>
+                          )}
+                        </div>
+                        <div
+                          className="text-xs mt-1 line-clamp-2"
+                          style={{ color: 'var(--foreground-muted)' }}
+                        >
+                          {result.excerpt}
+                        </div>
+                      </button>
+                    ))
+                  ) : searchQuery.length >= 3 ? (
+                    <div className="px-4 py-8 text-center">
+                      <div className="text-sm" style={{ color: 'var(--foreground-muted)' }}>
+                        No results found
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Settings Menu (Apple Books style) */}
+          <div className="relative" ref={settingsMenuRef}>
+            <button
+              onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+              className="p-2 backdrop-blur rounded-lg transition-colors"
+              style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
+              aria-label="Settings"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
 
           {showSettingsMenu && (
             <div
@@ -820,6 +1083,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
               `}</style>
             </div>
           )}
+          </div>
         </div>
       </header>
 
