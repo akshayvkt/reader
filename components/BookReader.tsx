@@ -625,8 +625,8 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
 
           {showSettingsMenu && (
             <div
-              className="absolute top-full right-0 mt-2 w-64 backdrop-blur-lg rounded-lg overflow-hidden"
-              style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(45, 42, 38, 0.15)' }}
+              className="absolute top-full right-0 mt-2 w-64 backdrop-blur-lg rounded-lg"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(45, 42, 38, 0.15)', overflow: 'visible' }}
             >
               {/* Fullscreen */}
               <button
@@ -641,7 +641,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
               </button>
 
               {/* Font Section - Dropdown */}
-              <div className="px-4 py-3 relative" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+              <div className="px-4 py-3 relative" style={{ borderBottom: '1px solid var(--border-subtle)', overflow: 'visible' }}>
                 <button
                   onClick={() => setShowFontDropdown(!showFontDropdown)}
                   className="w-full flex items-center justify-between py-1 transition-colors"
@@ -659,11 +659,11 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
                 {/* Font Dropdown */}
                 {showFontDropdown && (
                   <div
-                    className="absolute left-0 right-0 bottom-full mb-1 mx-2 rounded-lg overflow-hidden"
+                    className="absolute left-0 right-0 top-full mt-1 mx-2 rounded-lg overflow-hidden z-10"
                     style={{
                       background: 'var(--surface)',
                       border: '1px solid var(--border)',
-                      boxShadow: '0 -4px 16px rgba(45, 42, 38, 0.15)',
+                      boxShadow: '0 4px 16px rgba(45, 42, 38, 0.15)',
                     }}
                   >
                     {FONT_OPTIONS.map((font) => (
