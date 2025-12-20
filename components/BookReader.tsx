@@ -517,16 +517,6 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
         className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 transition-opacity hover:opacity-100 opacity-0"
         style={{ background: 'linear-gradient(to bottom, var(--surface) 0%, transparent 100%)' }}
       >
-        <button
-          onClick={onClose}
-          className="px-3 py-1.5 text-sm font-medium backdrop-blur rounded-lg transition-colors"
-          style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
-          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
-          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
-        >
-          ← Back to Library
-        </button>
-
         <div className="flex items-center gap-2">
           {/* Table of Contents button */}
           <button
@@ -540,8 +530,19 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
             <List className="w-5 h-5" />
           </button>
 
-          {/* Collapsed Settings Menu (Apple Books style) */}
-          <div className="relative">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 text-sm font-medium backdrop-blur rounded-lg transition-colors"
+            style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
+          >
+            ← Back to Library
+          </button>
+        </div>
+
+        {/* Collapsed Settings Menu (Apple Books style) */}
+        <div className="relative">
           <button
             onClick={() => setShowSettingsMenu(!showSettingsMenu)}
             className="p-2 backdrop-blur rounded-lg transition-colors"
@@ -637,7 +638,6 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
               </div>
             </div>
           )}
-          </div>
         </div>
       </header>
 
