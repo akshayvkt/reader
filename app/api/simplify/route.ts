@@ -29,10 +29,14 @@ export async function POST(request: NextRequest) {
 
     // Get configuration from environment variables
     const projectId = process.env.GCP_PROJECT_ID;
-    const location = process.env.GCP_LOCATION || 'global';
+    const location = 'global'; // Gemini 3 Flash preview requires global endpoint
     const serviceAccountEmail = process.env.GCP_SERVICE_ACCOUNT_EMAIL;
     const privateKey = process.env.GCP_PRIVATE_KEY;
     const privateKeyId = process.env.GCP_PRIVATE_KEY_ID;
+
+    console.log('=== Vertex AI Config ===');
+    console.log('Location:', location);
+    console.log('Project:', projectId);
 
     if (!projectId || !serviceAccountEmail || !privateKey) {
       return NextResponse.json(
@@ -77,6 +81,8 @@ export async function POST(request: NextRequest) {
     // For 'global' location, use aiplatform.googleapis.com directly; otherwise use region-specific endpoint
     const apiHost = location === 'global' ? 'aiplatform.googleapis.com' : `${location}-aiplatform.googleapis.com`;
     const apiUrl = `https://${apiHost}/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`;
+
+    console.log('API URL:', apiUrl);
 
     // Different prompts based on mode
     const prompts = {
