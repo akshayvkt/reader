@@ -178,10 +178,27 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
             const contents = rend!.getContents();
             contents.forEach((content: Contents) => {
               const selection = content.window.getSelection();
-              if (selection && selection.toString().trim()) {
+              if (selection && selection.toString().trim() && selection.rangeCount > 0) {
                 const text = selection.toString();
                 setSelectedText(text);
-                setSelectionPosition({ x: mouseEvent.clientX, y: mouseEvent.clientY });
+
+                // Get position from selection range, not mouse position
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+
+                // The rect is relative to the iframe, need to adjust for iframe position
+                const iframe = content.document.defaultView?.frameElement;
+                if (iframe) {
+                  const iframeRect = iframe.getBoundingClientRect();
+                  // Position at the end of the selection (bottom-center)
+                  setSelectionPosition({
+                    x: iframeRect.left + rect.left + rect.width / 2,
+                    y: iframeRect.top + rect.bottom
+                  });
+                } else {
+                  // Fallback to mouse position if iframe not found
+                  setSelectionPosition({ x: mouseEvent.clientX, y: mouseEvent.clientY });
+                }
                 setShowSimplifier(true);
               }
             });
