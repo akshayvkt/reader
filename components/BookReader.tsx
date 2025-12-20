@@ -88,10 +88,10 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Page transition state
-  const [slideState, setSlideState] = useState<'idle' | 'sliding-out' | 'sliding-in'>('idle');
-  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
-  const PAGE_TRANSITION_DURATION = 150; // ms
+  // Page transition state (Apple Books-style page flip)
+  const [pageFlipState, setPageFlipState] = useState<'idle' | 'exiting' | 'entering'>('idle');
+  const [flipDirection, setFlipDirection] = useState<'next' | 'prev' | null>(null);
+  const PAGE_FLIP_DURATION = 250; // ms - slightly longer for natural feel
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const searchPanelRef = useRef<HTMLDivElement>(null);
@@ -500,42 +500,42 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
   }, [bookData, filePath]);
 
   const nextPage = useCallback(() => {
-    if (slideState !== 'idle') return;
+    if (pageFlipState !== 'idle') return;
 
-    setSlideDirection('left');
-    setSlideState('sliding-out');
+    setFlipDirection('next');
+    setPageFlipState('exiting');
 
-    // After slide out completes, change content and slide in
+    // After flip out completes, change content and flip in
     setTimeout(() => {
       renditionRef.current?.next();
-      setSlideState('sliding-in');
+      setPageFlipState('entering');
 
-      // After slide in completes, reset state
+      // After flip in completes, reset state
       setTimeout(() => {
-        setSlideState('idle');
-        setSlideDirection(null);
-      }, PAGE_TRANSITION_DURATION);
-    }, PAGE_TRANSITION_DURATION);
-  }, [slideState]);
+        setPageFlipState('idle');
+        setFlipDirection(null);
+      }, PAGE_FLIP_DURATION);
+    }, PAGE_FLIP_DURATION);
+  }, [pageFlipState]);
 
   const prevPage = useCallback(() => {
-    if (slideState !== 'idle') return;
+    if (pageFlipState !== 'idle') return;
 
-    setSlideDirection('right');
-    setSlideState('sliding-out');
+    setFlipDirection('prev');
+    setPageFlipState('exiting');
 
-    // After slide out completes, change content and slide in
+    // After flip out completes, change content and flip in
     setTimeout(() => {
       renditionRef.current?.prev();
-      setSlideState('sliding-in');
+      setPageFlipState('entering');
 
-      // After slide in completes, reset state
+      // After flip in completes, reset state
       setTimeout(() => {
-        setSlideState('idle');
-        setSlideDirection(null);
-      }, PAGE_TRANSITION_DURATION);
-    }, PAGE_TRANSITION_DURATION);
-  }, [slideState]);
+        setPageFlipState('idle');
+        setFlipDirection(null);
+      }, PAGE_FLIP_DURATION);
+    }, PAGE_FLIP_DURATION);
+  }, [pageFlipState]);
 
   // Get current theme colors from CSS variables
   const getThemeColors = useCallback(() => {
@@ -1280,18 +1280,40 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
           if (showFontDropdown) setShowFontDropdown(false);
         }}
       >
-        <div className="absolute inset-0 overflow-hidden" style={{ padding: '48px 24px', background: 'var(--surface)' }}>
+        <div
+          className="absolute inset-0 overflow-hidden"
+          style={{
+            padding: '48px 24px',
+            background: 'var(--surface)',
+            perspective: '1200px', // Enable 3D space for page flip
+          }}
+        >
           <div
             ref={viewerRef}
             className="w-full h-full"
             style={{
-              transform: slideState === 'idle'
-                ? 'translateX(0)'
-                : slideState === 'sliding-out'
-                  ? slideDirection === 'left' ? 'translateX(-30%)' : 'translateX(30%)'
-                  : 'translateX(0)',
-              opacity: slideState === 'sliding-out' ? 0 : 1,
-              transition: `transform ${PAGE_TRANSITION_DURATION}ms ease-out, opacity ${PAGE_TRANSITION_DURATION}ms ease-out`,
+              // 3D page flip effect
+              transformOrigin: flipDirection === 'next' ? 'left center' : 'right center',
+              transform: pageFlipState === 'exiting'
+                ? flipDirection === 'next'
+                  ? 'rotateY(-12deg)' // Page lifts from right, rotates left
+                  : 'rotateY(12deg)'  // Page lifts from left, rotates right
+                : 'rotateY(0deg)',
+              opacity: pageFlipState === 'exiting' ? 0 : 1,
+              transition: `transform ${PAGE_FLIP_DURATION}ms ease-out, opacity ${PAGE_FLIP_DURATION}ms ease-out`,
+            }}
+          />
+
+          {/* Shadow overlay - simulates shadow cast by turning page */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: flipDirection === 'next'
+                ? 'linear-gradient(to left, rgba(0,0,0,0.08) 0%, transparent 50%)'
+                : 'linear-gradient(to right, rgba(0,0,0,0.08) 0%, transparent 50%)',
+              opacity: pageFlipState === 'exiting' ? 1 : 0,
+              transition: `opacity ${PAGE_FLIP_DURATION}ms ease-out`,
+              margin: '48px 24px', // Match the padding of the container
             }}
           />
         </div>
