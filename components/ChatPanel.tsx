@@ -192,19 +192,6 @@ export default function ChatPanel() {
         </button>
       </div>
 
-      {/* Original text context */}
-      <div
-        className="px-4 py-3"
-        style={{ background: 'var(--background)', borderBottom: '1px solid var(--border-subtle)' }}
-      >
-        <div className="text-xs font-medium mb-1" style={{ color: 'var(--accent)' }}>
-          Selected text:
-        </div>
-        <p className="text-sm italic" style={{ color: 'var(--foreground-muted)' }}>
-          &ldquo;{conversation.originalText}&rdquo;
-        </p>
-      </div>
-
       {/* Scope selector pills */}
       <div
         className="px-4 py-3 flex items-center gap-2"
@@ -254,6 +241,18 @@ export default function ChatPanel() {
 
       {/* Messages - dynamic bottom padding to allow scrolling user message to top */}
       <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ paddingBottom: dynamicPadding > 0 ? `${dynamicPadding}px` : undefined }}>
+        {/* Selected text with terracotta accent */}
+        <div
+          className="text-sm italic"
+          style={{
+            borderLeft: '2px solid var(--accent)',
+            paddingLeft: '12px',
+            color: 'var(--foreground-muted)',
+          }}
+        >
+          &ldquo;{conversation.originalText}&rdquo;
+        </div>
+
         {conversation.messages.map((msg, index) => {
           // Attach ref to the last user message
           const isLastUserMessage = msg.role === 'user' &&
