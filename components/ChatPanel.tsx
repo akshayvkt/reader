@@ -20,6 +20,7 @@ export default function ChatPanel() {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const shouldScrollToUserMessage = useRef<boolean>(false);
+  const [dynamicPadding, setDynamicPadding] = useState<number>(0);
 
   // Scroll to user message when flag is set
   useEffect(() => {
@@ -55,6 +56,36 @@ export default function ChatPanel() {
       });
     }
   }, [conversation?.messages]);
+
+  // Calculate dynamic padding after AI responds
+  useEffect(() => {
+    if (!sending && userMessageRef.current && messagesContainerRef.current) {
+      requestAnimationFrame(() => {
+        const container = messagesContainerRef.current;
+        const userMessage = userMessageRef.current;
+        if (!container || !userMessage) return;
+
+        const containerHeight = container.clientHeight;
+        const userMessageRect = userMessage.getBoundingClientRect();
+
+        // Get the next sibling (AI response) if it exists
+        const aiResponse = userMessage.nextElementSibling as HTMLElement | null;
+        const aiResponseHeight = aiResponse?.offsetHeight || 0;
+
+        const contentHeight = userMessageRect.height + aiResponseHeight + 32; // 32px for spacing
+        const neededPadding = Math.max(0, containerHeight - contentHeight);
+
+        setDynamicPadding(neededPadding);
+      });
+    }
+  }, [sending, conversation?.messages]);
+
+  // Reset padding when starting new message
+  useEffect(() => {
+    if (sending) {
+      setDynamicPadding(0);
+    }
+  }, [sending]);
 
   // Focus input when panel opens
   useEffect(() => {
@@ -215,8 +246,8 @@ export default function ChatPanel() {
         </div>
       </div>
 
-      {/* Messages - add bottom padding while sending to allow scrolling user message to top */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ paddingBottom: sending ? '60vh' : undefined }}>
+      {/* Messages - dynamic bottom padding to allow scrolling user message to top */}
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ paddingBottom: sending ? '60vh' : dynamicPadding > 0 ? `${dynamicPadding}px` : undefined }}>
         {conversation.messages.map((msg, index) => {
           // Attach ref to the last user message
           const isLastUserMessage = msg.role === 'user' &&
