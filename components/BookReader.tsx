@@ -719,6 +719,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
       for (const item of spine.spineItems) {
         try {
           // Load the section if not already loaded
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await item.load((book as any).load.bind(book));
 
           // Find matches in this section
@@ -810,6 +811,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
       // Find the spine item matching current href
       for (const item of spine.spineItems) {
         if (item.href === currentHref || currentHref.includes(item.href) || item.href.includes(currentHref.split('#')[0])) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await item.load((book as any).load.bind(book));
           const text = item.document?.body?.textContent?.trim() || '';
           item.unload();
@@ -853,6 +855,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
 
       for (const item of spine.spineItems) {
         try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await item.load((book as any).load.bind(book));
           const text = item.document?.body?.textContent?.trim() || '';
           item.unload();
@@ -927,11 +930,13 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
     console.log('[Spread] Effect triggered, isExpanded:', isExpanded);
     const timeout = setTimeout(() => {
       if (renditionRef.current) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const rend = renditionRef.current as any;
         const spreadMode = isExpanded ? 'none' : 'auto';
         console.log('[Spread] Setting spread to:', spreadMode);
-        renditionRef.current.spread(spreadMode);
+        rend.spread(spreadMode);
         // Force re-render at current position to apply spread change
-        const currentCfi = renditionRef.current.location?.start?.cfi;
+        const currentCfi = rend.location?.start?.cfi;
         if (currentCfi) {
           renditionRef.current.display(currentCfi);
         }
