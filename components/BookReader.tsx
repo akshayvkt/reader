@@ -149,6 +149,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
       if (settingsMenuRef.current && !settingsMenuRef.current.contains(e.target as Node)) {
         setShowSettingsMenu(false);
         setShowFontDropdown(false);
+        containerRef.current?.focus();
       }
     };
 
@@ -169,6 +170,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
     const handleClickOutside = (e: MouseEvent) => {
       if (searchPanelRef.current && !searchPanelRef.current.contains(e.target as Node)) {
         setShowSearchPanel(false);
+        containerRef.current?.focus();
       }
     };
 
@@ -422,6 +424,8 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
             setShowSettingsMenu(false);
             setShowSearchPanel(false);
             setShowFontDropdown(false);
+            // Restore focus to container for keyboard navigation
+            setTimeout(() => containerRef.current?.focus(), 0);
           });
         });
 
@@ -614,6 +618,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
     if (renditionRef.current) {
       renditionRef.current.display(href);
       setShowChapterNav(false); // Auto-close after selection
+      containerRef.current?.focus(); // Restore focus for keyboard navigation
     }
   }, []);
 
@@ -741,6 +746,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
       setShowSearchPanel(false);
       setSearchQuery('');
       setSearchResults([]);
+      containerRef.current?.focus(); // Restore focus for keyboard navigation
     }
   }, []);
 
@@ -828,7 +834,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
       e.preventDefault();
       setShowChapterNav(prev => !prev);
     }
-  }, [showSettingsMenu, showChapterNav, showSearchPanel, toggleFullscreen]);
+  }, [showSettingsMenu, showChapterNav, showSearchPanel, toggleFullscreen, nextPage, prevPage]);
 
   useEffect(() => {
     // Use capture phase (true) to catch events before they reach iframes
@@ -854,6 +860,24 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
   }, []);
+
+  // Restore focus when window regains focus (returning from another app)
+  useEffect(() => {
+    const handleWindowFocus = () => {
+      setTimeout(() => {
+        // Only restore if no input is focused and no panel with input is open
+        const activeEl = document.activeElement;
+        const isInputFocused = activeEl instanceof HTMLInputElement ||
+                               activeEl instanceof HTMLTextAreaElement;
+        if (!isInputFocused && !showSearchPanel) {
+          containerRef.current?.focus();
+        }
+      }, 100);
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    return () => window.removeEventListener('focus', handleWindowFocus);
+  }, [showSearchPanel]);
 
   return (
     <div
@@ -1278,7 +1302,10 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
         toc={tableOfContents}
         currentHref={currentHref}
         onNavigate={handleChapterNavigate}
-        onClose={() => setShowChapterNav(false)}
+        onClose={() => {
+          setShowChapterNav(false);
+          containerRef.current?.focus();
+        }}
         isOpen={showChapterNav}
         pageNumbers={pageNumbers}
       />
