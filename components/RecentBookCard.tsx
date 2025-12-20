@@ -45,7 +45,7 @@ export default function RecentBookCard({ book, onClick, index }: RecentBookCardP
         style={{
           color: 'var(--foreground)',
           fontFamily: 'var(--font-libre-baskerville)',
-          maxWidth: '100px',
+          maxWidth: '144px',
         }}
       >
         {book.title}
@@ -55,7 +55,7 @@ export default function RecentBookCard({ book, onClick, index }: RecentBookCardP
       {book.progress > 0 && (
         <div
           className="mt-1.5 h-0.5 rounded-full overflow-hidden"
-          style={{ background: 'var(--border)', width: '100px' }}
+          style={{ background: 'var(--border)', width: '144px' }}
         >
           <div
             className="h-full rounded-full"

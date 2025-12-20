@@ -29,9 +29,9 @@ function generateColor(title: string): string {
 
 export default function BookCover({ coverUrl, title, size = 'small' }: BookCoverProps) {
   const aspectRatio = '2 / 3'; // Standard book ratio
-  const width = size === 'large' ? '140px' : '100px';
-  const fontSize = size === 'large' ? '14px' : '11px';
-  const padding = size === 'large' ? '16px' : '10px';
+  const width = size === 'large' ? '168px' : '144px';
+  const fontSize = size === 'large' ? '16px' : '13px';
+  const padding = size === 'large' ? '20px' : '14px';
 
   if (coverUrl) {
     return (
