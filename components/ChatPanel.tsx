@@ -193,8 +193,12 @@ export default function ChatPanel() {
             >
               <ReactMarkdown
                 components={{
-                  strong: ({ children }) => <strong className="font-medium">{children}</strong>,
-                  em: ({ children }) => <em className="italic">{children}</em>,
+                  h1: ({ children }) => <h1 className="text-xl font-bold mt-4 mb-2">{children}</h1>,
+                  h2: ({ children }) => <h2 className="text-lg font-bold mt-3 mb-2">{children}</h2>,
+                  h3: ({ children }) => <h3 className="text-base font-semibold mt-3 mb-1">{children}</h3>,
+                  ul: ({ children }) => <ul className="list-disc ml-4 my-2">{children}</ul>,
+                  ol: ({ children }) => <ol className="list-decimal ml-4 my-2">{children}</ol>,
+                  li: ({ children }) => <li className="mb-1">{children}</li>,
                   p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
                 }}
               >
