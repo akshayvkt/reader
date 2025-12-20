@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import ePub from 'epubjs';
 import type { Rendition, Contents, TocItem } from 'epubjs';
-import { ChevronLeft, ChevronRight, Settings, Type, AlignJustify, Maximize2, Minimize2, List, Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Settings, Type, AlignJustify, Maximize2, Minimize2, List, Search, X, Sun, Moon, Monitor } from 'lucide-react';
 import Simplifier from './Simplifier';
 import ChapterNav from './ChapterNav';
 import { useChat } from '../contexts/ChatContext';
@@ -93,9 +93,48 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Theme state
+  const [theme, setTheme] = useState<'auto' | 'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('reader-theme') as 'auto' | 'light' | 'dark') || 'auto';
+    }
+    return 'auto';
+  });
+  const [systemPrefersDark, setSystemPrefersDark] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
+
+  // Compute effective theme (what's actually displayed)
+  const effectiveTheme = theme === 'auto' ? (systemPrefersDark ? 'dark' : 'light') : theme;
+
   // Focus container on mount to enable keyboard shortcuts immediately
   useEffect(() => {
     containerRef.current?.focus();
+  }, []);
+
+  // Apply theme to document
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'auto') {
+      // Remove data-theme to let media query handle it
+      root.removeAttribute('data-theme');
+    } else {
+      root.setAttribute('data-theme', theme);
+    }
+    localStorage.setItem('reader-theme', theme);
+  }, [theme]);
+
+  // Listen for system preference changes
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => {
+      setSystemPrefersDark(e.matches);
+    };
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
   }, []);
 
   // Close settings menu when clicking outside
@@ -263,9 +302,11 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
       const savedFont = localStorage.getItem('reader-font-preference') || FONT_OPTIONS[0].value; // Charter
       const savedLineSpacing = localStorage.getItem('reader-line-spacing') || LINE_SPACING_OPTIONS[2].value; // Relaxed
       const savedFontSize = localStorage.getItem('reader-font-size') || FONT_SIZE_OPTIONS[2].value; // Large
-      
-        // Warm charcoal text color for book content
-        const textColor = '#2D2A26';
+
+        // Get theme colors from CSS variables
+        const styles = getComputedStyle(document.documentElement);
+        const textColor = styles.getPropertyValue('--foreground').trim();
+        const backgroundColor = styles.getPropertyValue('--surface').trim();
 
         rend.themes.default({
         'body': {
@@ -273,7 +314,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
           'line-height': savedLineSpacing,
           'font-size': savedFontSize,
           'color': textColor,
-          'background': '#FFFCF7'
+          'background': backgroundColor
         },
         'p': {
           'font-family': savedFont,
@@ -441,10 +482,19 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
     renditionRef.current?.prev();
   }, []);
 
+  // Get current theme colors from CSS variables
+  const getThemeColors = useCallback(() => {
+    const styles = getComputedStyle(document.documentElement);
+    return {
+      textColor: styles.getPropertyValue('--foreground').trim(),
+      backgroundColor: styles.getPropertyValue('--surface').trim(),
+    };
+  }, []);
+
   const applyTypographySettings = useCallback(() => {
     if (rendition) {
-      // Warm charcoal text color for book content
-      const textColor = '#2D2A26';
+      // Get theme colors from CSS variables
+      const { textColor, backgroundColor } = getThemeColors();
 
       rendition.themes.default({
         'body': {
@@ -452,7 +502,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
           'line-height': selectedLineSpacing,
           'font-size': selectedFontSize,
           'color': textColor,
-          'background': '#FFFCF7'
+          'background': backgroundColor
         },
         'p': {
           'font-family': selectedFont,
@@ -480,7 +530,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
         }
       });
     }
-  }, [rendition, selectedFont, selectedLineSpacing, selectedFontSize]);
+  }, [rendition, selectedFont, selectedLineSpacing, selectedFontSize, getThemeColors]);
 
   const handleFontChange = useCallback((fontValue: string) => {
     setSelectedFont(fontValue);
@@ -525,10 +575,10 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
     }
   }, [selectedFontSize, showSizeDotsTemporarily]);
 
-  // Apply typography settings whenever they change
+  // Apply typography settings whenever they change (including theme)
   useEffect(() => {
     applyTypographySettings();
-  }, [applyTypographySettings]);
+  }, [applyTypographySettings, effectiveTheme]);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -949,6 +999,34 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
               className="absolute top-full right-0 mt-2 w-64 backdrop-blur-lg rounded-lg"
               style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(45, 42, 38, 0.15)', overflow: 'visible' }}
             >
+              {/* Theme Section - Dropdown */}
+              <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {effectiveTheme === 'dark' ? (
+                      <Moon className="w-4 h-4" style={{ color: 'var(--foreground-muted)' }} />
+                    ) : (
+                      <Sun className="w-4 h-4" style={{ color: 'var(--foreground-muted)' }} />
+                    )}
+                    <span className="text-sm" style={{ color: 'var(--foreground)' }}>Theme</span>
+                  </div>
+                  <select
+                    value={theme}
+                    onChange={(e) => setTheme(e.target.value as 'auto' | 'light' | 'dark')}
+                    className="text-sm px-2 py-1 rounded-md cursor-pointer outline-none"
+                    style={{
+                      background: 'var(--background)',
+                      color: 'var(--foreground)',
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    <option value="auto">Auto</option>
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                  </select>
+                </div>
+              </div>
+
               {/* Fullscreen */}
               <button
                 onClick={() => { toggleFullscreen(); setShowSettingsMenu(false); }}
@@ -1131,7 +1209,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
           if (showFontDropdown) setShowFontDropdown(false);
         }}
       >
-        <div className="absolute inset-0" style={{ padding: '48px 24px', background: '#FFFCF7' }}>
+        <div className="absolute inset-0" style={{ padding: '48px 24px', background: 'var(--surface)' }}>
           <div ref={viewerRef} className="w-full h-full" />
         </div>
         

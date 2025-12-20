@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  /* Warm backgrounds */
+  /* Warm backgrounds - Light Mode (default) */
   --background: #FAF7F2;
   --background-muted: #F5F0E8;
   --surface: #FFFCF7;
@@ -25,17 +25,29 @@
   --shadow-color: 30 20% 20%;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-serif: var(--font-libre-baskerville);
+/* Dark Mode - via data attribute (for manual toggle) */
+[data-theme="dark"] {
+  --background: #1F1D1A;
+  --background-muted: #2A2825;
+  --surface: #292724;
+
+  --foreground: #EDE9E3;
+  --foreground-muted: #B0AAA0;
+  --foreground-subtle: #7A756C;
+
+  --accent: #D4907A;
+  --accent-hover: #E0A08C;
+  --accent-light: #3D3530;
+  --accent-subtle: #2E2A27;
+
+  --border: #3A3632;
+  --border-subtle: #2F2C29;
 }
 
-/* Warm Dark Mode */
+/* Dark Mode - via system preference (fallback for 'auto' mode) */
+/* Only applies if data-theme is not explicitly set to 'light' */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --background: #1F1D1A;
     --background-muted: #2A2825;
     --surface: #292724;
@@ -52,6 +64,14 @@
     --border: #3A3632;
     --border-subtle: #2F2C29;
   }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-libre-baskerville);
 }
 
 body {
