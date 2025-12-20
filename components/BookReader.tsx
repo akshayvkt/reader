@@ -419,7 +419,7 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
   return (
     <div
       ref={containerRef}
-      className="h-full w-full flex flex-col outline-none"
+      className="relative h-full w-full flex flex-col outline-none"
       style={{ background: 'var(--background)' }}
       tabIndex={0}
       autoFocus
