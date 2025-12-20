@@ -901,23 +901,41 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
     }, 350);
   }, [startConversation, setIsExpanded, extractChapterText, extractBookText]);
 
-  // Resize epub and adjust spread when chat panel expands/collapses
+  // Resize epub when container size changes (using ResizeObserver)
+  useEffect(() => {
+    if (!viewerRef.current) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (renditionRef.current) {
+          const { width, height } = entry.contentRect;
+          if (width > 0 && height > 0) {
+            console.log('[Resize] Container resized to:', width, 'x', height);
+            renditionRef.current.resize(width, height);
+          }
+        }
+      }
+    });
+
+    resizeObserver.observe(viewerRef.current);
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  // Adjust spread when chat panel expands/collapses
   useEffect(() => {
     console.log('[Spread] Effect triggered, isExpanded:', isExpanded);
     const timeout = setTimeout(() => {
-      console.log('[Spread] Timeout fired, checking refs...');
-      if (renditionRef.current && viewerRef.current) {
-        const { width, height } = viewerRef.current.getBoundingClientRect();
-        console.log('[Spread] Resizing to:', width, 'x', height);
-        renditionRef.current.resize(width, height);
-        // Single page when chat is open, auto-spread when closed
+      if (renditionRef.current) {
         const spreadMode = isExpanded ? 'none' : 'auto';
         console.log('[Spread] Setting spread to:', spreadMode);
         renditionRef.current.spread(spreadMode);
-      } else {
-        console.log('[Spread] Missing refs - rendition:', !!renditionRef.current, 'viewer:', !!viewerRef.current);
+        // Force re-render at current position to apply spread change
+        const currentCfi = renditionRef.current.location?.start?.cfi;
+        if (currentCfi) {
+          renditionRef.current.display(currentCfi);
+        }
       }
-    }, 350);
+    }, 100);
     return () => clearTimeout(timeout);
   }, [isExpanded]);
 
