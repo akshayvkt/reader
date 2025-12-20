@@ -696,7 +696,9 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
       </header>
 
       <div className="flex-1 relative">
-        <div ref={viewerRef} className="w-full h-full" />
+        <div className="absolute inset-0" style={{ padding: '48px 24px', background: '#FFFCF7' }}>
+          <div ref={viewerRef} className="w-full h-full" />
+        </div>
         
         {/* Visible navigation buttons at bottom */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4 z-10" style={{ position: 'absolute' }}>
