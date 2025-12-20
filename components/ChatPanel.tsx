@@ -16,13 +16,9 @@ export default function ChatPanel() {
   const { isExpanded, conversation, setIsExpanded, addMessage, setScope } = useChat();
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const userMessageRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [conversation?.messages]);
+  const lastUserMessageIndex = useRef<number>(-1);
 
   // Focus input when panel opens
   useEffect(() => {
@@ -39,9 +35,17 @@ export default function ChatPanel() {
       content: input.trim(),
     };
 
+    // Track index of this user message for scrolling
+    lastUserMessageIndex.current = conversation.messages.length;
+
     addMessage(userMessage);
     setInput('');
     setSending(true);
+
+    // Scroll to user message after it renders
+    setTimeout(() => {
+      userMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
 
     // Determine the context based on scope
     let scopeContext: string | undefined;
@@ -138,7 +142,7 @@ export default function ChatPanel() {
         className="px-4 py-3 flex items-center gap-2"
         style={{ borderBottom: '1px solid var(--border-subtle)' }}
       >
-        <span className="text-xs" style={{ color: 'var(--foreground-muted)' }}>Context:</span>
+        <span className="text-xs font-medium" style={{ color: 'var(--foreground-muted)' }}>Context:</span>
         <div
           className="flex rounded-lg overflow-hidden"
           style={{ border: '1px solid var(--border)' }}
@@ -182,38 +186,40 @@ export default function ChatPanel() {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        {conversation.messages.map((msg) => (
-          <div key={msg.id}>
-            <div className="text-xs font-medium mb-1" style={{ color: 'var(--accent)' }}>
-              {msg.role === 'user' ? 'You:' : 'Reader:'}
-            </div>
-            <div
-              className="text-sm leading-relaxed"
-              style={{ color: 'var(--foreground)' }}
-            >
-              <ReactMarkdown
-                components={{
-                  h1: ({ children }) => <h1 className="text-xl font-bold mt-4 mb-2">{children}</h1>,
-                  h2: ({ children }) => <h2 className="text-lg font-bold mt-3 mb-2">{children}</h2>,
-                  h3: ({ children }) => <h3 className="text-base font-semibold mt-3 mb-1">{children}</h3>,
-                  ul: ({ children }) => <ul className="list-disc ml-4 my-2">{children}</ul>,
-                  ol: ({ children }) => <ol className="list-decimal ml-4 my-2">{children}</ol>,
-                  li: ({ children }) => <li className="mb-1">{children}</li>,
-                  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                }}
+        {conversation.messages.map((msg, index) => {
+          const isTrackedUserMessage = index === lastUserMessageIndex.current;
+          return (
+            <div key={msg.id} ref={isTrackedUserMessage ? userMessageRef : null}>
+              <div className="text-xs font-medium mb-1" style={{ color: 'var(--accent)' }}>
+                {msg.role === 'user' ? 'You:' : 'Reader:'}
+              </div>
+              <div
+                className="text-sm leading-relaxed"
+                style={{ color: 'var(--foreground)' }}
               >
-                {msg.content}
-              </ReactMarkdown>
+                <ReactMarkdown
+                  components={{
+                    h1: ({ children }) => <h1 className="text-xl font-bold mt-4 mb-2">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-lg font-bold mt-3 mb-2">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-base font-semibold mt-3 mb-1">{children}</h3>,
+                    ul: ({ children }) => <ul className="list-disc ml-4 my-2">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal ml-4 my-2">{children}</ol>,
+                    li: ({ children }) => <li className="mb-1">{children}</li>,
+                    p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                  }}
+                >
+                  {msg.content}
+                </ReactMarkdown>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {sending && (
           <div className="flex items-center gap-2">
             <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--accent)' }} />
             <span className="text-sm" style={{ color: 'var(--foreground-muted)' }}>Thinking...</span>
           </div>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}

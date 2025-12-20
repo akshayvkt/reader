@@ -242,9 +242,13 @@ Response:`;
     }
 
     const data = await response.json();
-    
+
     // Extract the text from the Vertex AI response
     const simplified = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Unable to simplify text';
+
+    console.log('=== Raw Gemini Response ===');
+    console.log(simplified);
+    console.log('=== End Response ===');
 
     return NextResponse.json({ simplified });
   } catch (error) {
