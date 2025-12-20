@@ -259,9 +259,13 @@ export default function ChatPanel() {
             !conversation.messages.slice(index + 1).some(m => m.role === 'user');
           const isUser = msg.role === 'user';
           return (
-            <div key={msg.id} ref={isLastUserMessage ? userMessageRef : null}>
+            <div
+              key={msg.id}
+              ref={isLastUserMessage ? userMessageRef : null}
+              className={isUser ? 'flex justify-end' : ''}
+            >
               <div
-                className={`text-sm leading-relaxed ${isUser ? 'px-4 py-3 rounded-2xl' : ''}`}
+                className={`text-sm leading-relaxed ${isUser ? 'px-4 py-3 rounded-2xl max-w-[95%]' : ''}`}
                 style={{
                   color: 'var(--foreground)',
                   background: isUser ? 'var(--background-muted)' : 'transparent',
