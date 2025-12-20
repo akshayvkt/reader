@@ -89,7 +89,8 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
   const [searchQuery, setSearchQuery] = useState('');
 
   // Page transition state
-  const [isPageTransitioning, setIsPageTransitioning] = useState(false);
+  const [slideState, setSlideState] = useState<'idle' | 'sliding-out' | 'sliding-in'>('idle');
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
   const PAGE_TRANSITION_DURATION = 150; // ms
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -483,22 +484,42 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
   }, [bookData, filePath]);
 
   const nextPage = useCallback(() => {
-    if (isPageTransitioning) return;
-    setIsPageTransitioning(true);
+    if (slideState !== 'idle') return;
+
+    setSlideDirection('left');
+    setSlideState('sliding-out');
+
+    // After slide out completes, change content and slide in
     setTimeout(() => {
       renditionRef.current?.next();
-      setTimeout(() => setIsPageTransitioning(false), PAGE_TRANSITION_DURATION);
+      setSlideState('sliding-in');
+
+      // After slide in completes, reset state
+      setTimeout(() => {
+        setSlideState('idle');
+        setSlideDirection(null);
+      }, PAGE_TRANSITION_DURATION);
     }, PAGE_TRANSITION_DURATION);
-  }, [isPageTransitioning]);
+  }, [slideState]);
 
   const prevPage = useCallback(() => {
-    if (isPageTransitioning) return;
-    setIsPageTransitioning(true);
+    if (slideState !== 'idle') return;
+
+    setSlideDirection('right');
+    setSlideState('sliding-out');
+
+    // After slide out completes, change content and slide in
     setTimeout(() => {
       renditionRef.current?.prev();
-      setTimeout(() => setIsPageTransitioning(false), PAGE_TRANSITION_DURATION);
+      setSlideState('sliding-in');
+
+      // After slide in completes, reset state
+      setTimeout(() => {
+        setSlideState('idle');
+        setSlideDirection(null);
+      }, PAGE_TRANSITION_DURATION);
     }, PAGE_TRANSITION_DURATION);
-  }, [isPageTransitioning]);
+  }, [slideState]);
 
   // Get current theme colors from CSS variables
   const getThemeColors = useCallback(() => {
@@ -1243,13 +1264,18 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
           if (showFontDropdown) setShowFontDropdown(false);
         }}
       >
-        <div className="absolute inset-0" style={{ padding: '48px 24px', background: 'var(--surface)' }}>
+        <div className="absolute inset-0 overflow-hidden" style={{ padding: '48px 24px', background: 'var(--surface)' }}>
           <div
             ref={viewerRef}
-            className="w-full h-full transition-opacity"
+            className="w-full h-full"
             style={{
-              opacity: isPageTransitioning ? 0 : 1,
-              transitionDuration: `${PAGE_TRANSITION_DURATION}ms`,
+              transform: slideState === 'idle'
+                ? 'translateX(0)'
+                : slideState === 'sliding-out'
+                  ? slideDirection === 'left' ? 'translateX(-30%)' : 'translateX(30%)'
+                  : 'translateX(0)',
+              opacity: slideState === 'sliding-out' ? 0 : 1,
+              transition: `transform ${PAGE_TRANSITION_DURATION}ms ease-out, opacity ${PAGE_TRANSITION_DURATION}ms ease-out`,
             }}
           />
         </div>
