@@ -4,6 +4,8 @@ export interface ElectronAPI {
   isElectron: boolean;
   readFile: (filePath: string) => Promise<ArrayBuffer>;
   fileExists: (filePath: string) => Promise<boolean>;
+  getLibraryPath: () => Promise<string>;
+  importBook: (originalPath: string) => Promise<string>;
 }
 
 // Extend the Window interface to include electronAPI

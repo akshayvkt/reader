@@ -10,4 +10,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Check if a file exists
   fileExists: (filePath) => ipcRenderer.invoke('file-exists', filePath),
+
+  // Get the library folder path
+  getLibraryPath: () => ipcRenderer.invoke('get-library-path'),
+
+  // Import a book into the library (copy from original location)
+  // Returns the new file path in the library
+  importBook: (originalPath) => ipcRenderer.invoke('import-book', originalPath),
 });

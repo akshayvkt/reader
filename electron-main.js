@@ -1,6 +1,23 @@
 const { app, BrowserWindow, Menu, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
+const crypto = require('crypto');
+
+// Get the path to our books library folder
+function getLibraryPath() {
+  return path.join(app.getPath('userData'), 'books');
+}
+
+// Ensure the library folder exists
+async function ensureLibraryExists() {
+  const libraryPath = getLibraryPath();
+  try {
+    await fs.mkdir(libraryPath, { recursive: true });
+  } catch (error) {
+    console.error('Error creating library folder:', error);
+  }
+  return libraryPath;
+}
 
 let mainWindow;
 const isDev = process.env.NODE_ENV !== 'production';
@@ -129,5 +146,44 @@ ipcMain.handle('file-exists', async (event, filePath) => {
     return true;
   } catch {
     return false;
+  }
+});
+
+// Get the library folder path
+ipcMain.handle('get-library-path', async () => {
+  return await ensureLibraryExists();
+});
+
+// Import a book into the library (copy from original location)
+// Returns the new file path in the library
+ipcMain.handle('import-book', async (event, originalPath) => {
+  try {
+    const libraryPath = await ensureLibraryExists();
+
+    // Read the original file
+    const fileBuffer = await fs.readFile(originalPath);
+
+    // Generate a unique filename using hash of content + original name
+    const hash = crypto.createHash('md5').update(fileBuffer).digest('hex').slice(0, 8);
+    const ext = path.extname(originalPath);
+    const baseName = path.basename(originalPath, ext);
+    // Sanitize filename (remove special characters)
+    const safeName = baseName.replace(/[^a-zA-Z0-9-_\s]/g, '').trim();
+    const newFileName = `${safeName}-${hash}${ext}`;
+    const newFilePath = path.join(libraryPath, newFileName);
+
+    // Check if file already exists in library (same content)
+    try {
+      await fs.access(newFilePath);
+      // File already exists, just return its path
+      return newFilePath;
+    } catch {
+      // File doesn't exist, copy it
+      await fs.writeFile(newFilePath, fileBuffer);
+      return newFilePath;
+    }
+  } catch (error) {
+    console.error('Error importing book:', error);
+    throw new Error(`Failed to import book: ${error.message}`);
   }
 });

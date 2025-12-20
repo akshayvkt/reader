@@ -37,11 +37,23 @@ export default function Home() {
       return;
     }
 
-    // In Electron, File objects have a .path property
-    const filePath = file.path;
-
+    // Get the file data
     const arrayBuffer = await file.arrayBuffer();
-    setCurrentFilePath(filePath);
+
+    // In Electron, copy the book to our library folder
+    let libraryPath: string | undefined;
+    if (file.path && window.electronAPI) {
+      try {
+        // Import book to library (copies the file)
+        libraryPath = await window.electronAPI.importBook(file.path);
+      } catch (error) {
+        console.error('Error importing book to library:', error);
+        // Fall back to original path if import fails
+        libraryPath = file.path;
+      }
+    }
+
+    setCurrentFilePath(libraryPath);
     setLoadError(null);
     setBookData(arrayBuffer);
   }, []);
