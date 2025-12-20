@@ -590,15 +590,41 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
     setIsSearching(true);
 
     try {
+      const book = bookRef.current;
+      const allResults: { cfi: string; excerpt: string }[] = [];
+
+      // Search through each spine item
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const results = await (bookRef.current as any).search(query);
+      const spine = book.spine as any;
+
+      for (const item of spine.spineItems) {
+        try {
+          // Load the section if not already loaded
+          await item.load(book.load.bind(book));
+
+          // Find matches in this section
+          const found = await item.find(query);
+          if (found && found.length > 0) {
+            allResults.push(...found);
+          }
+
+          // Unload to free memory
+          item.unload();
+
+          // Stop if we have enough results
+          if (allResults.length >= 50) break;
+        } catch {
+          // Skip sections that fail to load
+          continue;
+        }
+      }
 
       // Map results to include chapter titles, limit to 50
-      const mappedResults: SearchResult[] = results.slice(0, 50).map((result: { cfi: string; excerpt: string }) => ({
+      const mappedResults: SearchResult[] = allResults.slice(0, 50).map((result) => ({
         cfi: result.cfi,
         excerpt: result.excerpt,
         chapterTitle: getChapterTitleFromCfi(result.cfi),
-        pageNumber: undefined, // Could add page number lookup here if needed
+        pageNumber: undefined,
       }));
 
       setSearchResults(mappedResults);
