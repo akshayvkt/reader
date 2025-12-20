@@ -1,9 +1,12 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 // Expose protected methods to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
   // Check if we're running in Electron
   isElectron: true,
+
+  // Get the file path from a File object (Electron-specific)
+  getFilePath: (file) => webUtils.getPathForFile(file),
 
   // Read a file by path and return its contents as ArrayBuffer
   readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),

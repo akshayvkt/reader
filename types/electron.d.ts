@@ -2,6 +2,7 @@
 
 export interface ElectronAPI {
   isElectron: boolean;
+  getFilePath: (file: File) => string;
   readFile: (filePath: string) => Promise<ArrayBuffer>;
   fileExists: (filePath: string) => Promise<boolean>;
   getLibraryPath: () => Promise<string>;

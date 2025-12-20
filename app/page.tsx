@@ -42,17 +42,17 @@ export default function Home() {
 
     // In Electron, copy the book to our library folder
     let libraryPath: string | undefined;
-    if (file.path && window.electronAPI) {
+
+    if (window.electronAPI) {
       try {
+        // Get the file path using Electron's webUtils
+        const originalPath = window.electronAPI.getFilePath(file);
         // Import book to library (copies the file)
-        libraryPath = await window.electronAPI.importBook(file.path);
+        libraryPath = await window.electronAPI.importBook(originalPath);
       } catch (error) {
         console.error('Error importing book to library:', error);
-        // Fall back to original path if import fails
-        libraryPath = file.path;
       }
     }
-
     setCurrentFilePath(libraryPath);
     setLoadError(null);
     setBookData(arrayBuffer);
