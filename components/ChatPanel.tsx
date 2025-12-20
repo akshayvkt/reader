@@ -23,19 +23,11 @@ export default function ChatPanel() {
 
   // Scroll to user message when flag is set
   useEffect(() => {
-    if (shouldScrollToUserMessage.current && userMessageRef.current && messagesContainerRef.current) {
-      const container = messagesContainerRef.current;
-      const userMessage = userMessageRef.current;
-
-      // Calculate scroll position to put user message at top of container
-      const containerRect = container.getBoundingClientRect();
-      const messageRect = userMessage.getBoundingClientRect();
-      const scrollOffset = messageRect.top - containerRect.top + container.scrollTop;
-
-      container.scrollTo({
-        top: scrollOffset,
-        behavior: 'smooth'
-      });
+    if (shouldScrollToUserMessage.current && userMessageRef.current) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        userMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 10);
       shouldScrollToUserMessage.current = false;
     }
   }, [conversation?.messages]);

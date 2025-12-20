@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Loader2, Lightbulb, Sparkles, Send, Maximize2 } from 'lucide-react';
+import { Loader2, Lightbulb, Sparkles, ArrowUp, Maximize2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { ChatMessage } from '../types/chat';
 
@@ -375,7 +375,7 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
                 className="p-1.5 rounded-lg transition-colors disabled:opacity-50"
                 style={{ background: 'var(--accent)', color: 'white' }}
               >
-                <Send className="w-4 h-4" />
+                <ArrowUp className="w-4 h-4" />
               </button>
             </div>
           </div>
