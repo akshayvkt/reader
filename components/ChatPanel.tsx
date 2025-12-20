@@ -215,8 +215,8 @@ export default function ChatPanel() {
         </div>
       </div>
 
-      {/* Messages */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      {/* Messages - add bottom padding while sending to allow scrolling user message to top */}
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ paddingBottom: sending ? '60vh' : undefined }}>
         {conversation.messages.map((msg, index) => {
           // Attach ref to the last user message
           const isLastUserMessage = msg.role === 'user' &&
