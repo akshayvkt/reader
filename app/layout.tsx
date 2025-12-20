@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
+import { Geist, Geist_Mono, Space_Grotesk, Libre_Baskerville } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,6 +17,12 @@ const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
 });
 
+const libreBaskerville = Libre_Baskerville({
+  variable: "--font-libre-baskerville",
+  weight: ["400", "700"],
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "Simple Reader",
   description: "Read complex books with AI-powered simplification",
@@ -30,7 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${libreBaskerville.variable} antialiased`}
       >
         {children}
       </body>

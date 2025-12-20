@@ -49,7 +49,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 flex items-center justify-center p-8">
+    <div className="min-h-screen flex items-center justify-center p-8" style={{ background: 'var(--background)' }}>
       <div className="w-full max-w-2xl">
         <div
           onDrop={handleDrop}
@@ -58,11 +58,18 @@ export default function Home() {
           className={`
             relative rounded-3xl p-20 text-center
             transition-all duration-300 ease-out cursor-pointer
-            ${isDragging 
-              ? 'bg-white shadow-2xl scale-[1.02]' 
-              : 'bg-white shadow-md hover:shadow-xl'
+            ${isDragging
+              ? 'scale-[1.02]'
+              : 'hover:scale-[1.01]'
             }
           `}
+          style={{
+            background: 'var(--surface)',
+            boxShadow: isDragging
+              ? '0 20px 40px rgba(45, 42, 38, 0.15)'
+              : '0 4px 20px rgba(45, 42, 38, 0.08)',
+            border: '1px solid var(--border-subtle)'
+          }}
         >
           <input
             type="file"
@@ -72,16 +79,22 @@ export default function Home() {
           />
 
           <div className="flex flex-col items-center gap-6">
-            <BookOpen className={`
-              w-12 h-12 transition-all duration-300
-              ${isDragging ? 'text-gray-900 scale-110' : 'text-gray-400'}
-            `} />
-            
+            <BookOpen
+              className={`w-12 h-12 transition-all duration-300 ${isDragging ? 'scale-110' : ''}`}
+              style={{ color: isDragging ? 'var(--accent)' : 'var(--foreground-subtle)' }}
+            />
+
             <div className="text-center">
-              <p className="text-xl text-gray-800 mb-1" style={{ fontFamily: 'var(--font-space-grotesk)' }}>
+              <p
+                className="text-xl mb-1"
+                style={{ fontFamily: 'var(--font-libre-baskerville)', color: 'var(--foreground)' }}
+              >
                 Add your book
               </p>
-              <p className="text-sm text-gray-400" style={{ fontFamily: 'var(--font-space-grotesk)' }}>
+              <p
+                className="text-sm"
+                style={{ color: 'var(--foreground-subtle)' }}
+              >
                 EPUB or PDF files
               </p>
             </div>
@@ -90,7 +103,10 @@ export default function Home() {
 
         {/* Minimal branding */}
         <div className="mt-12 text-center">
-          <h1 className="text-xs font-medium text-gray-400 tracking-wider uppercase" style={{ fontFamily: 'var(--font-space-grotesk)' }}>
+          <h1
+            className="text-xs font-medium tracking-wider uppercase"
+            style={{ fontFamily: 'var(--font-libre-baskerville)', color: 'var(--foreground-subtle)' }}
+          >
             Reader
           </h1>
         </div>

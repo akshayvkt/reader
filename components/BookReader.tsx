@@ -353,17 +353,24 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
   }, []);
 
   return (
-    <div 
+    <div
       ref={containerRef}
-      className="fixed inset-0 bg-gray-50 flex flex-col outline-none"
+      className="fixed inset-0 flex flex-col outline-none"
+      style={{ background: 'var(--background)' }}
       tabIndex={0}
       autoFocus
     >
       {/* Minimal header - auto-hides */}
-      <header className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 bg-gradient-to-b from-white/90 to-transparent transition-opacity hover:opacity-100 opacity-0">
+      <header
+        className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 transition-opacity hover:opacity-100 opacity-0"
+        style={{ background: 'linear-gradient(to bottom, var(--surface) 0%, transparent 100%)' }}
+      >
         <button
           onClick={onClose}
-          className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white/80 backdrop-blur rounded-lg"
+          className="px-3 py-1.5 text-sm font-medium backdrop-blur rounded-lg transition-colors"
+          style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
+          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
+          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
         >
           ← Back to Library
         </button>
@@ -373,7 +380,10 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
           {/* Fullscreen Toggle */}
           <button
             onClick={toggleFullscreen}
-            className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white/80 backdrop-blur rounded-lg flex items-center gap-2"
+            className="px-3 py-1.5 text-sm font-medium backdrop-blur rounded-lg flex items-center gap-2 transition-colors"
+            style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
             aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
             title="Press F to toggle fullscreen"
           >
@@ -387,7 +397,7 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
             </span>
           </button>
 
-          <div className="w-px h-6 bg-gray-300/50 hidden sm:block" />
+          <div className="w-px h-6 hidden sm:block" style={{ background: 'var(--border)' }} />
           {/* Font Selector */}
           <div className="relative">
             <button
@@ -396,23 +406,37 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
                 setShowLineSpacingMenu(false);
                 setShowFontSizeMenu(false);
               }}
-              className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white/80 backdrop-blur rounded-lg flex items-center gap-2"
+              className="px-3 py-1.5 text-sm font-medium backdrop-blur rounded-lg flex items-center gap-2 transition-colors"
+              style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
               aria-label="Change font"
             >
               <Type className="w-4 h-4" />
               <span className="hidden sm:inline">Font</span>
             </button>
-            
+
             {showFontMenu && (
-              <div className="absolute top-full right-0 mt-2 w-48 bg-white/95 backdrop-blur-lg rounded-lg shadow-xl border border-gray-200/50 overflow-hidden">
+              <div
+                className="absolute top-full right-0 mt-2 w-48 backdrop-blur-lg rounded-lg overflow-hidden"
+                style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(45, 42, 38, 0.15)' }}
+              >
                 {FONT_OPTIONS.map((font) => (
                   <button
                     key={font.name}
                     onClick={() => handleFontChange(font.value)}
-                    className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-100/80 transition-colors ${
-                      selectedFont === font.value ? 'bg-blue-50/80 text-blue-600' : 'text-gray-700'
-                    }`}
-                    style={{ fontFamily: font.value }}
+                    className="w-full px-4 py-2.5 text-left text-sm transition-colors"
+                    style={{
+                      fontFamily: font.value,
+                      background: selectedFont === font.value ? 'var(--accent-subtle)' : 'transparent',
+                      color: selectedFont === font.value ? 'var(--accent)' : 'var(--foreground)'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selectedFont !== font.value) e.currentTarget.style.background = 'var(--background-muted)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedFont !== font.value) e.currentTarget.style.background = 'transparent';
+                    }}
                   >
                     {font.name}
                   </button>
@@ -429,22 +453,36 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
                 setShowFontMenu(false);
                 setShowFontSizeMenu(false);
               }}
-              className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white/80 backdrop-blur rounded-lg flex items-center gap-2"
+              className="px-3 py-1.5 text-sm font-medium backdrop-blur rounded-lg flex items-center gap-2 transition-colors"
+              style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
               aria-label="Change line spacing"
             >
               <AlignJustify className="w-4 h-4" />
               <span className="hidden sm:inline">Spacing</span>
             </button>
-            
+
             {showLineSpacingMenu && (
-              <div className="absolute top-full right-0 mt-2 w-36 bg-white/95 backdrop-blur-lg rounded-lg shadow-xl border border-gray-200/50 overflow-hidden">
+              <div
+                className="absolute top-full right-0 mt-2 w-36 backdrop-blur-lg rounded-lg overflow-hidden"
+                style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(45, 42, 38, 0.15)' }}
+              >
                 {LINE_SPACING_OPTIONS.map((spacing) => (
                   <button
                     key={spacing.name}
                     onClick={() => handleLineSpacingChange(spacing.value)}
-                    className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-100/80 transition-colors ${
-                      selectedLineSpacing === spacing.value ? 'bg-blue-50/80 text-blue-600' : 'text-gray-700'
-                    }`}
+                    className="w-full px-4 py-2.5 text-left text-sm transition-colors"
+                    style={{
+                      background: selectedLineSpacing === spacing.value ? 'var(--accent-subtle)' : 'transparent',
+                      color: selectedLineSpacing === spacing.value ? 'var(--accent)' : 'var(--foreground)'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selectedLineSpacing !== spacing.value) e.currentTarget.style.background = 'var(--background-muted)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedLineSpacing !== spacing.value) e.currentTarget.style.background = 'transparent';
+                    }}
                   >
                     {spacing.name}
                   </button>
@@ -461,22 +499,36 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
                 setShowFontMenu(false);
                 setShowLineSpacingMenu(false);
               }}
-              className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white/80 backdrop-blur rounded-lg flex items-center gap-2"
+              className="px-3 py-1.5 text-sm font-medium backdrop-blur rounded-lg flex items-center gap-2 transition-colors"
+              style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
               aria-label="Change font size"
             >
               <AArrowUp className="w-4 h-4" />
               <span className="hidden sm:inline">Size</span>
             </button>
-            
+
             {showFontSizeMenu && (
-              <div className="absolute top-full right-0 mt-2 w-36 bg-white/95 backdrop-blur-lg rounded-lg shadow-xl border border-gray-200/50 overflow-hidden">
+              <div
+                className="absolute top-full right-0 mt-2 w-36 backdrop-blur-lg rounded-lg overflow-hidden"
+                style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(45, 42, 38, 0.15)' }}
+              >
                 {FONT_SIZE_OPTIONS.map((size) => (
                   <button
                     key={size.name}
                     onClick={() => handleFontSizeChange(size.value)}
-                    className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-100/80 transition-colors ${
-                      selectedFontSize === size.value ? 'bg-blue-50/80 text-blue-600' : 'text-gray-700'
-                    }`}
+                    className="w-full px-4 py-2.5 text-left text-sm transition-colors"
+                    style={{
+                      background: selectedFontSize === size.value ? 'var(--accent-subtle)' : 'transparent',
+                      color: selectedFontSize === size.value ? 'var(--accent)' : 'var(--foreground)'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selectedFontSize !== size.value) e.currentTarget.style.background = 'var(--background-muted)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedFontSize !== size.value) e.currentTarget.style.background = 'transparent';
+                    }}
                   >
                     {size.name}
                   </button>
@@ -494,18 +546,20 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4 z-10">
           <button
             onClick={prevPage}
-            className="p-2 rounded-full bg-white/90 hover:bg-white shadow-lg transition-all"
+            className="p-2 rounded-full transition-all hover:scale-105"
+            style={{ background: 'var(--surface)', boxShadow: '0 4px 16px rgba(45, 42, 38, 0.1)', border: '1px solid var(--border-subtle)' }}
             aria-label="Previous page"
           >
-            <ChevronLeft className="w-5 h-5 text-gray-700" />
+            <ChevronLeft className="w-5 h-5" style={{ color: 'var(--foreground-muted)' }} />
           </button>
 
           <button
             onClick={nextPage}
-            className="p-2 rounded-full bg-white/90 hover:bg-white shadow-lg transition-all"
+            className="p-2 rounded-full transition-all hover:scale-105"
+            style={{ background: 'var(--surface)', boxShadow: '0 4px 16px rgba(45, 42, 38, 0.1)', border: '1px solid var(--border-subtle)' }}
             aria-label="Next page"
           >
-            <ChevronRight className="w-5 h-5 text-gray-700" />
+            <ChevronRight className="w-5 h-5" style={{ color: 'var(--foreground-muted)' }} />
           </button>
         </div>
       </div>

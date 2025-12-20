@@ -138,33 +138,56 @@ export default function Simplifier({ text, position, onClose }: SimplifierProps)
 
       <div
         ref={popupRef}
-        className="fixed z-50 bg-white/95 backdrop-blur-sm border border-gray-200/80 rounded-lg shadow-lg py-1.5"
-        style={popupStyle}
+        className="fixed z-50 backdrop-blur-sm rounded-xl py-2"
+        style={{
+          ...popupStyle,
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          boxShadow: '0 8px 32px rgba(45, 42, 38, 0.12)'
+        }}
       >
       {!simplified && !loading ? (
         <>
           <button
             onClick={() => simplifyText('explain')}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-150 text-left whitespace-nowrap group"
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-colors duration-150 text-left whitespace-nowrap group"
+            style={{ color: 'var(--foreground)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--accent-subtle)';
+              e.currentTarget.style.color = 'var(--accent)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--foreground)';
+            }}
           >
-            <Lightbulb className="w-4 h-4 text-blue-500 group-hover:text-blue-600" />
+            <Lightbulb className="w-4 h-4" style={{ color: 'var(--accent)' }} />
             <span>Explain</span>
           </button>
           <button
             onClick={() => simplifyText('eli5')}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors duration-150 text-left whitespace-nowrap group"
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-colors duration-150 text-left whitespace-nowrap group"
+            style={{ color: 'var(--foreground)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--accent-subtle)';
+              e.currentTarget.style.color = 'var(--accent)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--foreground)';
+            }}
           >
-            <Sparkles className="w-4 h-4 text-purple-500 group-hover:text-purple-600" />
+            <Sparkles className="w-4 h-4" style={{ color: 'var(--accent)' }} />
             <span>ELI5</span>
           </button>
         </>
       ) : loading ? (
         <div className="flex items-center gap-2.5 px-4 py-2.5 min-w-[140px]">
-          <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-          <span className="text-sm font-medium text-gray-600">Loading...</span>
+          <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--accent)' }} />
+          <span className="text-sm font-medium" style={{ color: 'var(--foreground-muted)' }}>Loading...</span>
         </div>
       ) : (
-        <div className="text-gray-800 text-sm leading-relaxed overflow-y-auto max-h-[400px] max-w-md px-3 py-2">
+        <div className="text-sm leading-relaxed overflow-y-auto max-h-[400px] max-w-md px-4 py-2" style={{ color: 'var(--foreground)' }}>
           <ReactMarkdown
             components={{
               strong: ({ children }) => <strong className="font-medium">{children}</strong>,
