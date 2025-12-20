@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import ePub from 'epubjs';
 import type { Rendition, Contents, TocItem } from 'epubjs';
-import { ChevronLeft, ChevronRight, Settings, Type, AlignJustify, Maximize2, Minimize2, List, Search, X, Sun, Moon, Monitor } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Settings, Type, AlignJustify, Maximize2, Minimize2, List, Search, X, Sun, Moon } from 'lucide-react';
 import Simplifier from './Simplifier';
 import ChapterNav from './ChapterNav';
 import { useChat } from '../contexts/ChatContext';
@@ -443,7 +443,8 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
 
         // Close panels when clicking on epub content (inside iframe)
         // Use hooks.content to access each iframe's document directly
-        rend.hooks.content.register((contents: Contents) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (rend as any).hooks.content.register((contents: Contents) => {
           contents.document.addEventListener('click', () => {
             setShowSettingsMenu(false);
             setShowSearchPanel(false);
