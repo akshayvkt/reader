@@ -60,6 +60,7 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const selectionTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const settingsMenuRef = useRef<HTMLDivElement>(null);
 
   // Chapter navigation state
   const [tableOfContents, setTableOfContents] = useState<TocItem[]>([]);
@@ -72,6 +73,26 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
   useEffect(() => {
     containerRef.current?.focus();
   }, []);
+
+  // Close settings menu when clicking outside
+  useEffect(() => {
+    if (!showSettingsMenu) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (settingsMenuRef.current && !settingsMenuRef.current.contains(e.target as Node)) {
+        setShowSettingsMenu(false);
+      }
+    };
+
+    // Small delay to prevent immediate close on the same click that opened it
+    setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 10);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSettingsMenu]);
 
   useEffect(() => {
     if (!viewerRef.current || !bookData) return;
@@ -542,7 +563,7 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
         </div>
 
         {/* Collapsed Settings Menu (Apple Books style) */}
-        <div className="relative">
+        <div className="relative" ref={settingsMenuRef}>
           <button
             onClick={() => setShowSettingsMenu(!showSettingsMenu)}
             className="p-2 backdrop-blur rounded-lg transition-colors"
