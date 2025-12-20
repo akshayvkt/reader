@@ -74,8 +74,9 @@ export default function ChatPanel() {
   if (!isExpanded || !conversation) return null;
 
   return (
+    <>
     <div
-      className="h-full flex flex-col"
+      className="h-full flex flex-col animate-chat-slide-in"
       style={{ background: 'var(--surface)', borderLeft: '1px solid var(--border)' }}
     >
       {/* Header */}
@@ -184,5 +185,23 @@ export default function ChatPanel() {
         </div>
       </div>
     </div>
+
+    {/* Animation styles */}
+    <style jsx global>{`
+      @keyframes chatSlideIn {
+        from {
+          opacity: 0;
+          transform: translateX(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+      .animate-chat-slide-in {
+        animation: chatSlideIn 250ms ease-out forwards;
+      }
+    `}</style>
+    </>
   );
 }

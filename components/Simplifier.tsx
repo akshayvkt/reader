@@ -20,6 +20,7 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
   const [popupStyle, setPopupStyle] = useState<{ left: string; top: string }>({ left: '0px', top: '0px' });
+  const [isClosing, setIsClosing] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -207,8 +208,12 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
 
   const handleExpandToChat = useCallback(() => {
     if (onExpand && messages.length > 0) {
+      setIsClosing(true);
       onExpand(text, messages);
-      onClose();
+      // Delay close to allow fade-out animation
+      setTimeout(() => {
+        onClose();
+      }, 150);
     }
   }, [onExpand, text, messages, onClose]);
 
@@ -224,7 +229,7 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
 
       <div
         ref={popupRef}
-        className="fixed z-50 backdrop-blur-sm rounded-xl py-2 animate-popup-in"
+        className={`fixed z-50 backdrop-blur-sm rounded-xl py-2 ${isClosing ? 'animate-popup-out' : 'animate-popup-in'}`}
         style={{
           ...popupStyle,
           background: 'var(--surface)',
@@ -376,8 +381,21 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
             transform: scale(1) translateY(0);
           }
         }
+        @keyframes popupOut {
+          from {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+          to {
+            opacity: 0;
+            transform: scale(0.95) translateX(20px);
+          }
+        }
         .animate-popup-in {
           animation: popupIn 150ms ease-out forwards;
+        }
+        .animate-popup-out {
+          animation: popupOut 150ms ease-in forwards;
         }
       `}</style>
     </>
