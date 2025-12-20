@@ -698,33 +698,40 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
               </div>
 
               {/* Size Section - Apple Books style A/A */}
-              <div className="px-4 py-3 flex items-center justify-center gap-6" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                <button
-                  onClick={decreaseFontSize}
-                  disabled={selectedFontSize === FONT_SIZE_OPTIONS[0].value}
-                  className="px-3 py-2 rounded-lg transition-colors disabled:opacity-30"
-                  style={{
-                    background: 'var(--background)',
-                    color: 'var(--foreground)',
-                    fontFamily: 'Charter, Georgia, serif',
-                    fontSize: '14px',
-                  }}
-                >
-                  A
-                </button>
-                <button
-                  onClick={increaseFontSize}
-                  disabled={selectedFontSize === FONT_SIZE_OPTIONS[FONT_SIZE_OPTIONS.length - 1].value}
-                  className="px-3 py-2 rounded-lg transition-colors disabled:opacity-30"
-                  style={{
-                    background: 'var(--background)',
-                    color: 'var(--foreground)',
-                    fontFamily: 'Charter, Georgia, serif',
-                    fontSize: '20px',
-                  }}
-                >
-                  A
-                </button>
+              <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <span className="text-sm" style={{ color: 'var(--foreground)' }}>Size</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={decreaseFontSize}
+                    disabled={selectedFontSize === FONT_SIZE_OPTIONS[0].value}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg transition-all hover:scale-105 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    style={{
+                      background: 'var(--background)',
+                      border: '1px solid var(--border)',
+                      color: selectedFontSize === FONT_SIZE_OPTIONS[0].value ? 'var(--foreground-subtle)' : 'var(--foreground)',
+                      fontFamily: 'Charter, Georgia, serif',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    A
+                  </button>
+                  <button
+                    onClick={increaseFontSize}
+                    disabled={selectedFontSize === FONT_SIZE_OPTIONS[FONT_SIZE_OPTIONS.length - 1].value}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg transition-all hover:scale-105 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    style={{
+                      background: 'var(--background)',
+                      border: '1px solid var(--border)',
+                      color: selectedFontSize === FONT_SIZE_OPTIONS[FONT_SIZE_OPTIONS.length - 1].value ? 'var(--foreground-subtle)' : 'var(--foreground)',
+                      fontFamily: 'Charter, Georgia, serif',
+                      fontSize: '20px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    A
+                  </button>
+                </div>
               </div>
 
               {/* Spacing Section - Slider */}
