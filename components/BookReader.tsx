@@ -190,10 +190,11 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
                 const iframe = content.document.defaultView?.frameElement;
                 if (iframe) {
                   const iframeRect = iframe.getBoundingClientRect();
-                  // Position at the end of the selection (bottom-center)
+                  // Position above the selection, horizontally centered
+                  // Pass the TOP of the selection so popup appears above it
                   setSelectionPosition({
                     x: iframeRect.left + rect.left + rect.width / 2,
-                    y: iframeRect.top + rect.bottom
+                    y: iframeRect.top + rect.top
                   });
                 } else {
                   // Fallback to mouse position if iframe not found

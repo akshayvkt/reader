@@ -48,7 +48,7 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
     };
   }, [onClose]);
 
-  // Smart positioning - position at selection, keep within viewport bounds
+  // Smart positioning - position ABOVE selection (like Kindle/Apple Books)
   useEffect(() => {
     if (!popupRef.current) return;
 
@@ -57,12 +57,20 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
 
-    let x = position.x;
-    let y = position.y + 8; // 8px below selection by default
+    // Center horizontally on the selection
+    let x = position.x - rect.width / 2;
 
-    // If would go off bottom of screen, show above selection instead
+    // Position ABOVE the selection by default (better UX - doesn't cover text)
+    let y = position.y - rect.height - 8;
+
+    // If would go off top of screen, show below selection instead
+    if (y < 20) {
+      y = position.y + 8;
+    }
+
+    // If would still go off bottom, just pin to bottom
     if (y + rect.height > viewportHeight - 20) {
-      y = position.y - rect.height - 8;
+      y = viewportHeight - rect.height - 20;
     }
 
     // If would go off right edge, shift left
