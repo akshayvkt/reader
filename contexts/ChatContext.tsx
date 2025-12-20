@@ -7,7 +7,7 @@ interface ChatContextValue {
   isExpanded: boolean;
   conversation: ConversationContext | null;
   setIsExpanded: (expanded: boolean) => void;
-  startConversation: (originalText: string, initialResponse: string, bookContext?: string) => void;
+  startConversation: (originalText: string, initialResponse: string, bookContext?: string, existingMessages?: ChatMessage[]) => void;
   addMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
   clearConversation: () => void;
 }
@@ -18,7 +18,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [conversation, setConversation] = useState<ConversationContext | null>(null);
 
-  const startConversation = useCallback((originalText: string, initialResponse: string, bookContext?: string) => {
+  const startConversation = useCallback((originalText: string, initialResponse: string, bookContext?: string, existingMessages?: ChatMessage[]) => {
+    // If existing messages provided (from popup), use them directly
+    if (existingMessages && existingMessages.length > 0) {
+      setConversation({
+        originalText,
+        bookContext,
+        messages: existingMessages,
+      });
+      return;
+    }
+
+    // Otherwise create a new conversation with the initial response
     const initialMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'assistant',

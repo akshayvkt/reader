@@ -740,13 +740,9 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
 
   // Handle expanding to chat panel
   const handleExpandToChat = useCallback((originalText: string, messages: ChatMessage[]) => {
-    // Start the conversation in the chat context
+    // Start the conversation in the chat context with all existing messages
     if (messages.length > 0) {
-      startConversation(originalText, messages[0].content);
-      // Add remaining messages
-      messages.slice(1).forEach(() => {
-        // Note: We'd need to add these through the context, but for now just expand
-      });
+      startConversation(originalText, messages[0].content, undefined, messages);
     }
     setIsExpanded(true);
     // Resize the epub rendition after the panel opens
