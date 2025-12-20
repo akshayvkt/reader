@@ -87,6 +87,10 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
   // Search state
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Page transition state
+  const [isPageTransitioning, setIsPageTransitioning] = useState(false);
+  const PAGE_TRANSITION_DURATION = 150; // ms
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const searchPanelRef = useRef<HTMLDivElement>(null);
@@ -475,12 +479,22 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
   }, [bookData, filePath]);
 
   const nextPage = useCallback(() => {
-    renditionRef.current?.next();
-  }, []);
+    if (isPageTransitioning) return;
+    setIsPageTransitioning(true);
+    setTimeout(() => {
+      renditionRef.current?.next();
+      setTimeout(() => setIsPageTransitioning(false), PAGE_TRANSITION_DURATION);
+    }, PAGE_TRANSITION_DURATION);
+  }, [isPageTransitioning]);
 
   const prevPage = useCallback(() => {
-    renditionRef.current?.prev();
-  }, []);
+    if (isPageTransitioning) return;
+    setIsPageTransitioning(true);
+    setTimeout(() => {
+      renditionRef.current?.prev();
+      setTimeout(() => setIsPageTransitioning(false), PAGE_TRANSITION_DURATION);
+    }, PAGE_TRANSITION_DURATION);
+  }, [isPageTransitioning]);
 
   // Get current theme colors from CSS variables
   const getThemeColors = useCallback(() => {
@@ -794,13 +808,13 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
     // Arrow keys
     if (e.key === 'ArrowRight') {
       e.preventDefault();
-      renditionRef.current?.next();
+      nextPage();
       // Refocus container to maintain keyboard navigation
       containerRef.current?.focus();
     }
     if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      renditionRef.current?.prev();
+      prevPage();
       // Refocus container to maintain keyboard navigation
       containerRef.current?.focus();
     }
@@ -1206,7 +1220,14 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
         }}
       >
         <div className="absolute inset-0" style={{ padding: '48px 24px', background: 'var(--surface)' }}>
-          <div ref={viewerRef} className="w-full h-full" />
+          <div
+            ref={viewerRef}
+            className="w-full h-full transition-opacity"
+            style={{
+              opacity: isPageTransitioning ? 0 : 1,
+              transitionDuration: `${PAGE_TRANSITION_DURATION}ms`,
+            }}
+          />
         </div>
         
         {/* Visible navigation buttons at bottom */}
