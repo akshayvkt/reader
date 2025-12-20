@@ -370,6 +370,16 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
 
         rend.on('selected', handleSelection);
 
+        // Close panels when clicking on epub content (inside iframe)
+        // Use hooks.content to access each iframe's document directly
+        rend.hooks.content.register((contents: Contents) => {
+          contents.document.addEventListener('click', () => {
+            setShowSettingsMenu(false);
+            setShowSearchPanel(false);
+            setShowFontDropdown(false);
+          });
+        });
+
         // Use bookId (already defined above) for localStorage
         const savedLocation = localStorage.getItem(`book-location-${bookId}`);
         if (savedLocation && !isCleanedUp) {
@@ -793,9 +803,9 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
       tabIndex={0}
       autoFocus
     >
-      {/* Minimal header - auto-hides */}
+      {/* Minimal header - auto-hides, stays visible when panels are open */}
       <header
-        className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 transition-opacity hover:opacity-100 opacity-0"
+        className={`absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 transition-opacity hover:opacity-100 ${showSettingsMenu || showSearchPanel ? 'opacity-100' : 'opacity-0'}`}
         style={{ background: 'linear-gradient(to bottom, var(--surface) 0%, transparent 100%)' }}
       >
         <div className="flex items-center gap-2">
@@ -1113,7 +1123,14 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
         </div>
       </header>
 
-      <div className="flex-1 relative">
+      <div
+        className="flex-1 relative"
+        onClick={() => {
+          if (showSettingsMenu) setShowSettingsMenu(false);
+          if (showSearchPanel) setShowSearchPanel(false);
+          if (showFontDropdown) setShowFontDropdown(false);
+        }}
+      >
         <div className="absolute inset-0" style={{ padding: '48px 24px', background: '#FFFCF7' }}>
           <div ref={viewerRef} className="w-full h-full" />
         </div>
