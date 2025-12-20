@@ -133,7 +133,7 @@ Simple explanation (do NOT repeat the original text):`,
 You have access to the full chapter${chapterTitle ? ` ("${chapterTitle}")` : ''} for context:
 
 <chapter_context>
-${scopeContext.slice(0, 15000)}
+${scopeContext}
 </chapter_context>
 
 `;
@@ -142,7 +142,7 @@ ${scopeContext.slice(0, 15000)}
 You have access to the book's content for context:
 
 <book_context>
-${scopeContext.slice(0, 30000)}
+${scopeContext}
 </book_context>
 
 `;
@@ -172,9 +172,9 @@ Response:`;
       // Build context-aware system message based on scope
       let contextInfo = '';
       if (scope === 'chapter' && scopeContext) {
-        contextInfo = `\n\nYou have access to the full chapter${chapterTitle ? ` ("${chapterTitle}")` : ''} for additional context:\n\n${scopeContext.slice(0, 15000)}`;
+        contextInfo = `\n\nYou have access to the full chapter${chapterTitle ? ` ("${chapterTitle}")` : ''} for additional context:\n\n${scopeContext}`;
       } else if (scope === 'book' && scopeContext) {
-        contextInfo = `\n\nYou have access to the book's content for additional context:\n\n${scopeContext.slice(0, 30000)}`;
+        contextInfo = `\n\nYou have access to the book's content for additional context:\n\n${scopeContext}`;
       }
 
       const systemContext = `You are a helpful reading companion. The user is reading a book and previously selected this text: "${originalText}". Continue helping them understand it.${contextInfo}`;

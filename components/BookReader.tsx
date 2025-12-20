@@ -840,7 +840,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
     }
   }, [currentHref, tableOfContents]);
 
-  // Extract text from entire book (limited to prevent context overflow)
+  // Extract text from entire book
   const extractBookText = useCallback(async (): Promise<string | null> => {
     if (!bookRef.current) return null;
 
@@ -849,22 +849,15 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const spine = book.spine as any;
       const allText: string[] = [];
-      const MAX_CHARS = 50000; // Limit to ~50k chars to avoid API limits
-      let totalChars = 0;
 
       for (const item of spine.spineItems) {
-        if (totalChars >= MAX_CHARS) break;
-
         try {
           await item.load(book.load.bind(book));
           const text = item.document?.body?.textContent?.trim() || '';
           item.unload();
 
           if (text) {
-            const remaining = MAX_CHARS - totalChars;
-            const truncatedText = text.slice(0, remaining);
-            allText.push(truncatedText);
-            totalChars += truncatedText.length;
+            allText.push(text);
           }
         } catch {
           // Skip sections that fail to load
