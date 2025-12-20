@@ -719,7 +719,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
       for (const item of spine.spineItems) {
         try {
           // Load the section if not already loaded
-          await item.load(book.load.bind(book));
+          await item.load((book as any).load.bind(book));
 
           // Find matches in this section
           const found = await item.find(query);
@@ -810,7 +810,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
       // Find the spine item matching current href
       for (const item of spine.spineItems) {
         if (item.href === currentHref || currentHref.includes(item.href) || item.href.includes(currentHref.split('#')[0])) {
-          await item.load(book.load.bind(book));
+          await item.load((book as any).load.bind(book));
           const text = item.document?.body?.textContent?.trim() || '';
           item.unload();
 
@@ -853,7 +853,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
 
       for (const item of spine.spineItems) {
         try {
-          await item.load(book.load.bind(book));
+          await item.load((book as any).load.bind(book));
           const text = item.document?.body?.textContent?.trim() || '';
           item.unload();
 
