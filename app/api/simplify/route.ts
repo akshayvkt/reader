@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     // Get configuration from environment variables
     const projectId = process.env.GCP_PROJECT_ID;
-    const location = process.env.GCP_LOCATION || 'us-central1';
+    const location = process.env.GCP_LOCATION || 'global';
     const serviceAccountEmail = process.env.GCP_SERVICE_ACCOUNT_EMAIL;
     const privateKey = process.env.GCP_PRIVATE_KEY;
     const privateKeyId = process.env.GCP_PRIVATE_KEY_ID;
@@ -73,8 +73,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Call Vertex AI API directly
-    const model = 'gemini-3-flash-preview'; // Using Gemini 3 Flash for better quality responses
-    const apiUrl = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`;
+    const model = 'gemini-3-flash-preview'; // Using Gemini 3 Flash preview
+    // For 'global' location, use aiplatform.googleapis.com directly; otherwise use region-specific endpoint
+    const apiHost = location === 'global' ? 'aiplatform.googleapis.com' : `${location}-aiplatform.googleapis.com`;
+    const apiUrl = `https://${apiHost}/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`;
 
     // Different prompts based on mode
     const prompts = {
