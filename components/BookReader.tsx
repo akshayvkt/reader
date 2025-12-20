@@ -727,27 +727,47 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
                 </button>
               </div>
 
-              {/* Spacing Section */}
+              {/* Spacing Section - Slider */}
               <div className="px-4 py-3">
-                <div className="text-xs font-medium mb-2 flex items-center gap-2" style={{ color: 'var(--foreground-muted)' }}>
-                  <AlignJustify className="w-3 h-3" /> Spacing
-                </div>
-                <div className="flex gap-1">
-                  {LINE_SPACING_OPTIONS.map((spacing) => (
-                    <button
-                      key={spacing.name}
-                      onClick={() => handleLineSpacingChange(spacing.value)}
-                      className="px-2 py-1 text-xs rounded transition-colors"
-                      style={{
-                        background: selectedLineSpacing === spacing.value ? 'var(--accent)' : 'var(--background)',
-                        color: selectedLineSpacing === spacing.value ? 'white' : 'var(--foreground-muted)'
-                      }}
-                    >
-                      {spacing.name}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-3">
+                  <AlignJustify className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--foreground-muted)' }} />
+                  <input
+                    type="range"
+                    min="1.2"
+                    max="2.2"
+                    step="0.1"
+                    value={selectedLineSpacing}
+                    onChange={(e) => handleLineSpacingChange(e.target.value)}
+                    className="flex-1 h-1 rounded-full appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${((parseFloat(selectedLineSpacing) - 1.2) / 1.0) * 100}%, var(--border) ${((parseFloat(selectedLineSpacing) - 1.2) / 1.0) * 100}%, var(--border) 100%)`,
+                    }}
+                  />
                 </div>
               </div>
+
+              {/* Slider thumb styles */}
+              <style>{`
+                input[type="range"]::-webkit-slider-thumb {
+                  -webkit-appearance: none;
+                  appearance: none;
+                  width: 16px;
+                  height: 16px;
+                  border-radius: 50%;
+                  background: var(--accent);
+                  cursor: pointer;
+                  box-shadow: 0 2px 4px rgba(45, 42, 38, 0.2);
+                }
+                input[type="range"]::-moz-range-thumb {
+                  width: 16px;
+                  height: 16px;
+                  border-radius: 50%;
+                  background: var(--accent);
+                  cursor: pointer;
+                  border: none;
+                  box-shadow: 0 2px 4px rgba(45, 42, 38, 0.2);
+                }
+              `}</style>
             </div>
           )}
         </div>
