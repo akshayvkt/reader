@@ -16,6 +16,12 @@ export default function Home() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Transition states for smooth open/close animations
+  const [isTransitioningToReader, setIsTransitioningToReader] = useState(false);
+  const [isTransitioningToHome, setIsTransitioningToHome] = useState(false);
+  const [showReader, setShowReader] = useState(false);
+  const pendingBookRef = useRef<{ data: ArrayBuffer; path?: string } | null>(null);
+
   // Load recent books on mount
   useEffect(() => {
     setRecentBooks(getRecentBooks());
@@ -27,6 +33,39 @@ export default function Home() {
       setRecentBooks(getRecentBooks());
     }
   }, [bookData]);
+
+  // Transition duration in ms
+  const TRANSITION_DURATION = 250;
+
+  // Open book with smooth transition
+  const openBookWithTransition = useCallback((data: ArrayBuffer, path?: string) => {
+    pendingBookRef.current = { data, path };
+    setIsTransitioningToReader(true);
+
+    // After fade-out completes, show reader
+    setTimeout(() => {
+      if (pendingBookRef.current) {
+        setBookData(pendingBookRef.current.data);
+        setCurrentFilePath(pendingBookRef.current.path);
+        setShowReader(true);
+        setIsTransitioningToReader(false);
+        pendingBookRef.current = null;
+      }
+    }, TRANSITION_DURATION);
+  }, []);
+
+  // Close reader with smooth transition
+  const closeReaderWithTransition = useCallback(() => {
+    setIsTransitioningToHome(true);
+
+    // After fade-out completes, show homepage
+    setTimeout(() => {
+      setBookData(null);
+      setCurrentFilePath(undefined);
+      setShowReader(false);
+      setIsTransitioningToHome(false);
+    }, TRANSITION_DURATION);
+  }, []);
 
   const handleFileUpload = useCallback(async (file: File) => {
     const isEpub = file.type === 'application/epub+zip' || file.name.endsWith('.epub');
@@ -53,10 +92,10 @@ export default function Home() {
         console.error('Error importing book to library:', error);
       }
     }
-    setCurrentFilePath(libraryPath);
+
     setLoadError(null);
-    setBookData(arrayBuffer);
-  }, []);
+    openBookWithTransition(arrayBuffer, libraryPath);
+  }, [openBookWithTransition]);
 
   // Open a book from the recent books list
   const openBook = useCallback(async (book: RecentBook) => {
@@ -71,9 +110,8 @@ export default function Home() {
         }
 
         const arrayBuffer = await window.electronAPI.readFile(book.filePath);
-        setCurrentFilePath(book.filePath);
         setLoadError(null);
-        setBookData(arrayBuffer);
+        openBookWithTransition(arrayBuffer, book.filePath);
       } catch (error) {
         console.error('Error reading file:', error);
         setLoadError(`Could not open "${book.title}". The file may have been moved or deleted.`);
@@ -82,7 +120,7 @@ export default function Home() {
       // Fallback for browser or books without filePath: open file picker
       openFilePicker();
     }
-  }, []);
+  }, [openBookWithTransition]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -111,16 +149,22 @@ export default function Home() {
     fileInputRef.current?.click();
   }, []);
 
-  if (bookData) {
+  // Show reader when we have book data
+  if (showReader && bookData) {
     return (
-      <BookReaderWrapper
-        bookData={bookData}
-        filePath={currentFilePath}
-        onClose={() => {
-          setBookData(null);
-          setCurrentFilePath(undefined);
+      <div
+        className="transition-opacity duration-250"
+        style={{
+          opacity: isTransitioningToHome ? 0 : 1,
+          transitionDuration: `${TRANSITION_DURATION}ms`,
         }}
-      />
+      >
+        <BookReaderWrapper
+          bookData={bookData}
+          filePath={currentFilePath}
+          onClose={closeReaderWithTransition}
+        />
+      </div>
     );
   }
 
@@ -130,8 +174,12 @@ export default function Home() {
 
   return (
     <div
-      className="min-h-screen"
-      style={{ background: 'var(--background)' }}
+      className="min-h-screen transition-opacity"
+      style={{
+        background: 'var(--background)',
+        opacity: isTransitioningToReader ? 0 : 1,
+        transitionDuration: `${TRANSITION_DURATION}ms`,
+      }}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
