@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import ePub from 'epubjs';
 import type { Rendition, Contents } from 'epubjs';
-import { ChevronLeft, ChevronRight, Type, AlignJustify, AArrowUp, Maximize2, Minimize2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Settings, Type, AlignJustify, AArrowUp, Maximize2, Minimize2 } from 'lucide-react';
 import Simplifier from './Simplifier';
 import { useChat } from '../contexts/ChatContext';
 import { ChatMessage } from '../types/chat';
@@ -56,9 +56,7 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
   const [selectedFontSize, setSelectedFontSize] = useState(() => {
     return localStorage.getItem('reader-font-size') || FONT_SIZE_OPTIONS[1].value;
   });
-  const [showFontMenu, setShowFontMenu] = useState(false);
-  const [showLineSpacingMenu, setShowLineSpacingMenu] = useState(false);
-  const [showFontSizeMenu, setShowFontSizeMenu] = useState(false);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const selectionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -295,22 +293,16 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
   const handleFontChange = useCallback((fontValue: string) => {
     setSelectedFont(fontValue);
     localStorage.setItem('reader-font-preference', fontValue);
-    setShowFontMenu(false);
-    containerRef.current?.focus();
   }, []);
 
   const handleLineSpacingChange = useCallback((spacing: string) => {
     setSelectedLineSpacing(spacing);
     localStorage.setItem('reader-line-spacing', spacing);
-    setShowLineSpacingMenu(false);
-    containerRef.current?.focus();
   }, []);
 
   const handleFontSizeChange = useCallback((size: string) => {
     setSelectedFontSize(size);
     localStorage.setItem('reader-font-size', size);
-    setShowFontSizeMenu(false);
-    containerRef.current?.focus();
   }, []);
 
   // Apply typography settings whenever they change
@@ -391,15 +383,13 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
       toggleFullscreen();
     }
     if (e.key === 'Escape') {
-      if (showFontMenu || showLineSpacingMenu || showFontSizeMenu) {
-        setShowFontMenu(false);
-        setShowLineSpacingMenu(false);
-        setShowFontSizeMenu(false);
+      if (showSettingsMenu) {
+        setShowSettingsMenu(false);
       } else {
         setShowSimplifier(false);
       }
     }
-  }, [showFontMenu, showLineSpacingMenu, showFontSizeMenu, toggleFullscreen]);
+  }, [showSettingsMenu, toggleFullscreen]);
 
   useEffect(() => {
     // Use capture phase (true) to catch events before they reach iframes
@@ -448,168 +438,104 @@ export default function BookReader({ bookData, onClose }: BookReaderProps) {
         >
           ← Back to Library
         </button>
-        
-        {/* Typography Controls and Fullscreen */}
-        <div className="flex items-center gap-2">
-          {/* Fullscreen Toggle */}
+
+        {/* Collapsed Settings Menu (Apple Books style) */}
+        <div className="relative">
           <button
-            onClick={toggleFullscreen}
-            className="px-3 py-1.5 text-sm font-medium backdrop-blur rounded-lg flex items-center gap-2 transition-colors"
+            onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+            className="p-2 backdrop-blur rounded-lg transition-colors"
             style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
             onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
             onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
-            aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-            title="Press F to toggle fullscreen"
+            aria-label="Settings"
           >
-            {isFullscreen ? (
-              <Minimize2 className="w-4 h-4" />
-            ) : (
-              <Maximize2 className="w-4 h-4" />
-            )}
-            <span className="hidden sm:inline">
-              {isFullscreen ? 'Exit' : 'Fullscreen'}
-            </span>
+            <Settings className="w-5 h-5" />
           </button>
 
-          <div className="w-px h-6 hidden sm:block" style={{ background: 'var(--border)' }} />
-          {/* Font Selector */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowFontMenu(!showFontMenu);
-                setShowLineSpacingMenu(false);
-                setShowFontSizeMenu(false);
-              }}
-              className="px-3 py-1.5 text-sm font-medium backdrop-blur rounded-lg flex items-center gap-2 transition-colors"
-              style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
-              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
-              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
-              aria-label="Change font"
+          {showSettingsMenu && (
+            <div
+              className="absolute top-full right-0 mt-2 w-64 backdrop-blur-lg rounded-lg overflow-hidden"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(45, 42, 38, 0.15)' }}
             >
-              <Type className="w-4 h-4" />
-              <span className="hidden sm:inline">Font</span>
-            </button>
-
-            {showFontMenu && (
-              <div
-                className="absolute top-full right-0 mt-2 w-48 backdrop-blur-lg rounded-lg overflow-hidden"
-                style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(45, 42, 38, 0.15)' }}
+              {/* Fullscreen */}
+              <button
+                onClick={() => { toggleFullscreen(); setShowSettingsMenu(false); }}
+                className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 transition-colors"
+                style={{ color: 'var(--foreground)', borderBottom: '1px solid var(--border-subtle)' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--background-muted)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                {FONT_OPTIONS.map((font) => (
-                  <button
-                    key={font.name}
-                    onClick={() => handleFontChange(font.value)}
-                    className="w-full px-4 py-2.5 text-left text-sm transition-colors"
-                    style={{
-                      fontFamily: font.value,
-                      background: selectedFont === font.value ? 'var(--accent-subtle)' : 'transparent',
-                      color: selectedFont === font.value ? 'var(--accent)' : 'var(--foreground)'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (selectedFont !== font.value) e.currentTarget.style.background = 'var(--background-muted)';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (selectedFont !== font.value) e.currentTarget.style.background = 'transparent';
-                    }}
-                  >
-                    {font.name}
-                  </button>
-                ))}
+                {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+              </button>
+
+              {/* Font Section */}
+              <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <div className="text-xs font-medium mb-2 flex items-center gap-2" style={{ color: 'var(--foreground-muted)' }}>
+                  <Type className="w-3 h-3" /> Font
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {FONT_OPTIONS.map((font) => (
+                    <button
+                      key={font.name}
+                      onClick={() => handleFontChange(font.value)}
+                      className="px-2 py-1 text-xs rounded transition-colors"
+                      style={{
+                        background: selectedFont === font.value ? 'var(--accent)' : 'var(--background)',
+                        color: selectedFont === font.value ? 'white' : 'var(--foreground-muted)'
+                      }}
+                    >
+                      {font.name.split(' ')[0]}
+                    </button>
+                  ))}
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* Line Spacing Selector */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowLineSpacingMenu(!showLineSpacingMenu);
-                setShowFontMenu(false);
-                setShowFontSizeMenu(false);
-              }}
-              className="px-3 py-1.5 text-sm font-medium backdrop-blur rounded-lg flex items-center gap-2 transition-colors"
-              style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
-              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
-              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
-              aria-label="Change line spacing"
-            >
-              <AlignJustify className="w-4 h-4" />
-              <span className="hidden sm:inline">Spacing</span>
-            </button>
-
-            {showLineSpacingMenu && (
-              <div
-                className="absolute top-full right-0 mt-2 w-36 backdrop-blur-lg rounded-lg overflow-hidden"
-                style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(45, 42, 38, 0.15)' }}
-              >
-                {LINE_SPACING_OPTIONS.map((spacing) => (
-                  <button
-                    key={spacing.name}
-                    onClick={() => handleLineSpacingChange(spacing.value)}
-                    className="w-full px-4 py-2.5 text-left text-sm transition-colors"
-                    style={{
-                      background: selectedLineSpacing === spacing.value ? 'var(--accent-subtle)' : 'transparent',
-                      color: selectedLineSpacing === spacing.value ? 'var(--accent)' : 'var(--foreground)'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (selectedLineSpacing !== spacing.value) e.currentTarget.style.background = 'var(--background-muted)';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (selectedLineSpacing !== spacing.value) e.currentTarget.style.background = 'transparent';
-                    }}
-                  >
-                    {spacing.name}
-                  </button>
-                ))}
+              {/* Size Section */}
+              <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <div className="text-xs font-medium mb-2 flex items-center gap-2" style={{ color: 'var(--foreground-muted)' }}>
+                  <AArrowUp className="w-3 h-3" /> Size
+                </div>
+                <div className="flex gap-1">
+                  {FONT_SIZE_OPTIONS.map((size) => (
+                    <button
+                      key={size.name}
+                      onClick={() => handleFontSizeChange(size.value)}
+                      className="px-2 py-1 text-xs rounded transition-colors"
+                      style={{
+                        background: selectedFontSize === size.value ? 'var(--accent)' : 'var(--background)',
+                        color: selectedFontSize === size.value ? 'white' : 'var(--foreground-muted)'
+                      }}
+                    >
+                      {size.name}
+                    </button>
+                  ))}
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* Font Size Selector */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowFontSizeMenu(!showFontSizeMenu);
-                setShowFontMenu(false);
-                setShowLineSpacingMenu(false);
-              }}
-              className="px-3 py-1.5 text-sm font-medium backdrop-blur rounded-lg flex items-center gap-2 transition-colors"
-              style={{ background: 'var(--surface)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
-              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
-              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--foreground-muted)'}
-              aria-label="Change font size"
-            >
-              <AArrowUp className="w-4 h-4" />
-              <span className="hidden sm:inline">Size</span>
-            </button>
-
-            {showFontSizeMenu && (
-              <div
-                className="absolute top-full right-0 mt-2 w-36 backdrop-blur-lg rounded-lg overflow-hidden"
-                style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(45, 42, 38, 0.15)' }}
-              >
-                {FONT_SIZE_OPTIONS.map((size) => (
-                  <button
-                    key={size.name}
-                    onClick={() => handleFontSizeChange(size.value)}
-                    className="w-full px-4 py-2.5 text-left text-sm transition-colors"
-                    style={{
-                      background: selectedFontSize === size.value ? 'var(--accent-subtle)' : 'transparent',
-                      color: selectedFontSize === size.value ? 'var(--accent)' : 'var(--foreground)'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (selectedFontSize !== size.value) e.currentTarget.style.background = 'var(--background-muted)';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (selectedFontSize !== size.value) e.currentTarget.style.background = 'transparent';
-                    }}
-                  >
-                    {size.name}
-                  </button>
-                ))}
+              {/* Spacing Section */}
+              <div className="px-4 py-3">
+                <div className="text-xs font-medium mb-2 flex items-center gap-2" style={{ color: 'var(--foreground-muted)' }}>
+                  <AlignJustify className="w-3 h-3" /> Spacing
+                </div>
+                <div className="flex gap-1">
+                  {LINE_SPACING_OPTIONS.map((spacing) => (
+                    <button
+                      key={spacing.name}
+                      onClick={() => handleLineSpacingChange(spacing.value)}
+                      className="px-2 py-1 text-xs rounded transition-colors"
+                      style={{
+                        background: selectedLineSpacing === spacing.value ? 'var(--accent)' : 'var(--background)',
+                        color: selectedLineSpacing === spacing.value ? 'white' : 'var(--foreground-muted)'
+                      }}
+                    >
+                      {spacing.name}
+                    </button>
+                  ))}
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </header>
 
