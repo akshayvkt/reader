@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Call Vertex AI API directly
-    const model = 'gemini-2.5-flash-lite'; // Using lightweight model for faster responses
+    const model = 'gemini-3-flash-preview'; // Using Gemini 3 Flash for better quality responses
     const apiUrl = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`;
 
     // Different prompts based on mode
@@ -209,6 +209,9 @@ Response:`;
         maxOutputTokens: 800,
         topP: 0.95,
         topK: 40,
+        thinkingConfig: {
+          thinkingLevel: 'MINIMAL', // Fastest responses
+        },
       }
     };
 
