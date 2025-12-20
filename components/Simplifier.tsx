@@ -224,14 +224,34 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
 
       <div
         ref={popupRef}
-        className="fixed z-50 backdrop-blur-sm rounded-xl py-2"
+        className="fixed z-50 backdrop-blur-sm rounded-xl py-2 animate-popup-in"
         style={{
           ...popupStyle,
           background: 'var(--surface)',
           border: '1px solid var(--border)',
-          boxShadow: '0 8px 32px rgba(45, 42, 38, 0.12)'
+          boxShadow: '0 12px 40px rgba(45, 35, 25, 0.18), 0 4px 12px rgba(45, 35, 25, 0.08)'
         }}
       >
+      {/* Expand button - top right corner */}
+      {onExpand && simplified && !loading && (
+        <button
+          onClick={handleExpandToChat}
+          className="absolute top-2 right-2 p-1.5 rounded-md transition-colors"
+          style={{ color: 'var(--foreground-subtle)' }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = 'var(--accent)';
+            e.currentTarget.style.background = 'var(--accent-subtle)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = 'var(--foreground-subtle)';
+            e.currentTarget.style.background = 'transparent';
+          }}
+          title="Expand to chat"
+        >
+          <Maximize2 className="w-3.5 h-3.5" />
+        </button>
+      )}
+
       {!simplified && !loading ? (
         <>
           <button
@@ -335,30 +355,27 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
                 <Send className="w-4 h-4" />
               </button>
             </div>
-
-            {/* Expand to Chat button */}
-            {onExpand && messages.length > 0 && (
-              <button
-                onClick={handleExpandToChat}
-                className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
-                style={{ background: 'var(--background)', color: 'var(--foreground-muted)', border: '1px solid var(--border-subtle)' }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--accent-subtle)';
-                  e.currentTarget.style.color = 'var(--accent)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--background)';
-                  e.currentTarget.style.color = 'var(--foreground-muted)';
-                }}
-              >
-                <Maximize2 className="w-3 h-3" />
-                Expand to Chat
-              </button>
-            )}
           </div>
         </div>
       )}
     </div>
+
+      {/* Animation styles */}
+      <style jsx global>{`
+        @keyframes popupIn {
+          from {
+            opacity: 0;
+            transform: scale(0.95) translateY(4px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+        .animate-popup-in {
+          animation: popupIn 150ms ease-out forwards;
+        }
+      `}</style>
     </>
   );
 }
