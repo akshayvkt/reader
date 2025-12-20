@@ -1146,7 +1146,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
                         key={index}
                         className="w-1.5 h-1.5 rounded-full"
                         style={{
-                          background: isFilled ? 'var(--foreground)' : 'rgba(45, 42, 38, 0.25)',
+                          background: isFilled ? 'var(--foreground)' : 'var(--foreground-subtle)',
                         }}
                       />
                     );
