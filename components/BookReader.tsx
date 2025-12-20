@@ -451,6 +451,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
             // Restore focus to container for keyboard navigation
             setTimeout(() => containerRef.current?.focus(), 0);
           });
+
         });
 
         // Use bookId (already defined above) for localStorage
@@ -920,6 +921,20 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     const target = e.target as HTMLElement;
+
+    // Handle copy (Ctrl+C / Cmd+C) - check for selection in epub iframes
+    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+      if (renditionRef.current) {
+        const contents = renditionRef.current.getContents();
+        contents.forEach((content: Contents) => {
+          const selection = content.window.getSelection();
+          if (selection && selection.toString().trim()) {
+            navigator.clipboard.writeText(selection.toString());
+          }
+        });
+      }
+      return;
+    }
 
     // Handle Escape key even when in input (to close search panel)
     if (e.key === 'Escape') {
