@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "electron-dev": "NODE_ENV=development electron .",
-    "electron-build": "next build && next export -o out && electron-builder",
+    "electron-build": "BUILD_TARGET=electron next build && electron-builder",
     "dist": "npm run electron-build"
   },
   "dependencies": {
@@ -49,6 +49,7 @@
     },
     "files": [
       "electron-main.js",
+      "electron-preload.js",
       "out/**/*",
       "node_modules/**/*"
     ]
