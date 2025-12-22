@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleAuth } from 'google-auth-library';
 
+// CORS headers for Electron app (file:// origin)
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+// Handle CORS preflight
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 interface ConversationMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -23,7 +35,7 @@ export async function POST(request: NextRequest) {
     if (!text) {
       return NextResponse.json(
         { error: 'Text is required' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -41,7 +53,7 @@ export async function POST(request: NextRequest) {
     if (!projectId || !serviceAccountEmail || !privateKey) {
       return NextResponse.json(
         { error: 'Google Cloud configuration missing. Please set GCP_PROJECT_ID, GCP_SERVICE_ACCOUNT_EMAIL, and GCP_PRIVATE_KEY in .env.local' },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
 
@@ -72,7 +84,7 @@ export async function POST(request: NextRequest) {
     if (!accessToken || !accessToken.token) {
       return NextResponse.json(
         { error: 'Failed to authenticate with Google Cloud' },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
 
@@ -237,7 +249,7 @@ Response:`;
       console.error('Vertex AI API error:', errorText);
       return NextResponse.json(
         { error: 'Failed to call Vertex AI', details: errorText },
-        { status: response.status }
+        { status: response.status, headers: corsHeaders }
       );
     }
 
@@ -246,12 +258,12 @@ Response:`;
     // Extract the text from the Vertex AI response
     const simplified = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Unable to simplify text';
 
-    return NextResponse.json({ simplified });
+    return NextResponse.json({ simplified }, { headers: corsHeaders });
   } catch (error) {
     console.error('Error simplifying text:', error);
     return NextResponse.json(
       { error: 'Failed to simplify text', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
