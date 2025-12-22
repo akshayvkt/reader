@@ -22,8 +22,16 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
   const [popupStyle, setPopupStyle] = useState<{ left: string; top: string }>({ left: '0px', top: '0px' });
   const [isClosing, setIsClosing] = useState(false);
+  const [isTextExpanded, setIsTextExpanded] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Truncate long selections to ~100 chars
+  const TEXT_TRUNCATE_LENGTH = 100;
+  const shouldTruncate = text.length > TEXT_TRUNCATE_LENGTH;
+  const displayText = shouldTruncate && !isTextExpanded
+    ? text.slice(0, TEXT_TRUNCATE_LENGTH).trim() + '...'
+    : text;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -84,7 +92,7 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
     x = Math.max(20, x);
 
     setPopupStyle({ left: `${x}px`, top: `${y}px` });
-  }, [position, simplified, loading]); // Recalculate when content changes
+  }, [position, simplified, loading, isTextExpanded]); // Recalculate when content changes
 
   const fetchDictionaryDefinition = async (word: string) => {
     try {
@@ -311,7 +319,16 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
               color: 'var(--foreground-muted)',
             }}
           >
-            &ldquo;{text}&rdquo;
+            &ldquo;{displayText}&rdquo;
+            {shouldTruncate && (
+              <button
+                onClick={() => setIsTextExpanded(!isTextExpanded)}
+                className="ml-1 text-xs font-medium hover:underline"
+                style={{ color: 'var(--accent)', fontStyle: 'normal' }}
+              >
+                {isTextExpanded ? 'see less' : 'see more'}
+              </button>
+            )}
           </div>
 
           {/* Messages */}
