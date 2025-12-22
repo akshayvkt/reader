@@ -46,7 +46,8 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
   } else {
     // In production, load the built Next.js app
-    mainWindow.loadURL(`file://${path.join(__dirname, 'out/index.html')}`);
+    // Use loadFile() instead of loadURL() to properly handle asar archives
+    mainWindow.loadFile(path.join(__dirname, 'out', 'index.html'));
   }
 
   // Show window when ready
