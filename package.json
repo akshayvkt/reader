@@ -11,8 +11,9 @@
     "start": "next start",
     "lint": "eslint",
     "electron-dev": "NODE_ENV=development electron .",
-    "electron-build": "BUILD_TARGET=electron next build && electron-builder",
-    "dist": "npm run electron-build"
+    "electron-build": "export SKIP_NOTARIZE=true && export BUILD_TARGET=electron && next build && electron-builder --config.mac.identity=null",
+    "electron-release": "BUILD_TARGET=electron next build && electron-builder",
+    "dist": "npm run electron-release"
   },
   "dependencies": {
     "@google-cloud/vertexai": "^1.10.0",
@@ -33,6 +34,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.2.3",
     "electron": "^38.1.0",
     "electron-builder": "^26.0.12",
     "eslint": "^9",
@@ -48,12 +50,11 @@
     },
     "mac": {
       "category": "public.app-category.books",
-      "icon": "public/icon.icns",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "entitlements.mac.plist",
       "entitlementsInherit": "entitlements.mac.plist",
-      "identity": "Developer ID Application: Dysun Inc (65H9JV933T)"
+      "identity": "Dysun Inc (65H9JV933T)"
     },
     "dmg": {
       "sign": false
@@ -63,14 +64,11 @@
       "electron-main.js",
       "electron-preload.js",
       "out/**/*",
-      "node_modules/**/*",
-      "!node_modules/@img/sharp-*",
-      "!node_modules/sharp",
-      "!node_modules/@google-cloud",
-      "!node_modules/google-auth-library",
-      "!node_modules/@google/genai"
+      "!node_modules/**/*"
     ],
     "asar": true,
-    "npmRebuild": false
+    "npmRebuild": false,
+    "buildDependenciesFromSource": false,
+    "nodeGypRebuild": false
   }
 }

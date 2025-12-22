@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, protocol } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
 const crypto = require('crypto');
@@ -20,7 +20,14 @@ async function ensureLibraryExists() {
 }
 
 let mainWindow;
-const isDev = process.env.NODE_ENV !== 'production';
+// Use app.isPackaged to detect production mode - more reliable than NODE_ENV
+const isDev = !app.isPackaged;
+
+// Register custom protocol for serving static files in production
+// This handles the absolute paths (/_next/...) that Next.js generates
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } }
+]);
 
 function createWindow() {
   // Create the browser window with Mac-friendly settings
@@ -45,9 +52,9 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:3000');
     mainWindow.webContents.openDevTools();
   } else {
-    // In production, load the built Next.js app
-    // Use loadFile() instead of loadURL() to properly handle asar archives
-    mainWindow.loadFile(path.join(__dirname, 'out', 'index.html'));
+    // In production, use custom app:// protocol to load the static export
+    // This allows absolute paths (/_next/...) to resolve correctly
+    mainWindow.loadURL('app://./index.html');
   }
 
   // Show window when ready
@@ -108,6 +115,23 @@ function createMenu() {
 
 // This method will be called when Electron has finished initialization
 app.whenReady().then(() => {
+  // In production, register the app:// protocol to serve static files
+  // This allows Next.js absolute paths (/_next/...) to work correctly
+  if (!isDev) {
+    protocol.handle('app', (request) => {
+      // Convert app://./path to actual file path
+      let url = request.url.replace('app://.', '');
+      // Remove query strings and hash
+      url = url.split('?')[0].split('#')[0];
+      // Decode URI components (spaces, special chars)
+      url = decodeURIComponent(url);
+      // Build the full path to the file in the out directory
+      const filePath = path.join(__dirname, 'out', url);
+      // Return the file using Electron's net module
+      return require('electron').net.fetch('file://' + filePath);
+    });
+  }
+
   createMenu();
   createWindow();
 
