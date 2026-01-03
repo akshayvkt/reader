@@ -17,7 +17,7 @@ export default function LandingPage() {
     {
       icon: Sparkles,
       title: 'AI-Powered Understanding',
-      description: 'Highlight any passage and get instant, clear explanations. Complex ideas become accessible without leaving your book.',
+      description: 'Highlight any passage for instant explanations. Want to go deeper? Expand into a chat to ask follow-up questions with full chapter or book context.',
     },
     {
       icon: FileText,
@@ -42,7 +42,7 @@ export default function LandingPage() {
     },
     {
       question: 'How does the AI explanation work?',
-      answer: 'Highlight any text and click "Explain". Our AI analyzes the passage in context and provides a clear, concise explanation. It understands the broader context of what you\'re reading.',
+      answer: 'Highlight any text to get an instant explanation. If you want to explore further, expand into a dedicated chat where you can ask follow-up questions. You can even give the AI context from the full chapter or entire book for deeper understanding.',
     },
     {
       question: 'Is my reading data private?',
@@ -152,7 +152,7 @@ export default function LandingPage() {
               animationFillMode: 'backwards',
             }}
           >
-            Free forever. No account required.
+            Free to use. No account required.
           </p>
         </div>
 
