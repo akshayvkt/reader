@@ -1,7 +1,17 @@
-const { app, BrowserWindow, Menu, ipcMain, protocol } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, protocol, shell, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
 const crypto = require('crypto');
+
+// Auth token storage path
+function getAuthTokenPath() {
+  return path.join(app.getPath('userData'), 'auth-token');
+}
+
+// API URL for OAuth
+const AUTH_BASE_URL = app.isPackaged
+  ? 'https://reader-g6kh.onrender.com'
+  : 'http://localhost:3000';
 
 // Get the path to our books library folder
 function getLibraryPath() {
@@ -23,11 +33,109 @@ let mainWindow;
 // Use app.isPackaged to detect production mode - more reliable than NODE_ENV
 const isDev = !app.isPackaged;
 
-// Register custom protocol for serving static files in production
-// This handles the absolute paths (/_next/...) that Next.js generates
+// Register custom protocols
+// - 'app' for serving static files in production
+// - 'simplereader' for OAuth callback from browser
 protocol.registerSchemesAsPrivileged([
-  { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } }
+  { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } },
+  { scheme: 'simplereader', privileges: { standard: true, secure: true } }
 ]);
+
+// Set as default protocol handler for simplereader://
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('simplereader', process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient('simplereader');
+}
+
+// Handle OAuth callback URL (simplereader://auth?token=xxx)
+function handleAuthCallback(url) {
+  try {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.protocol === 'simplereader:' && parsedUrl.hostname === 'auth') {
+      const token = parsedUrl.searchParams.get('token');
+      if (token) {
+        // Store the token securely
+        saveAuthToken(token);
+        // Notify the renderer that auth is complete
+        if (mainWindow) {
+          mainWindow.webContents.send('auth-success', token);
+          mainWindow.focus();
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error handling auth callback:', error);
+  }
+}
+
+// Save auth token securely
+async function saveAuthToken(token) {
+  try {
+    const tokenPath = getAuthTokenPath();
+    if (safeStorage.isEncryptionAvailable()) {
+      const encrypted = safeStorage.encryptString(token);
+      await fs.writeFile(tokenPath, encrypted);
+    } else {
+      // Fallback to plain storage if encryption not available
+      await fs.writeFile(tokenPath, token, 'utf-8');
+    }
+  } catch (error) {
+    console.error('Error saving auth token:', error);
+  }
+}
+
+// Load auth token
+async function loadAuthToken() {
+  try {
+    const tokenPath = getAuthTokenPath();
+    const data = await fs.readFile(tokenPath);
+    if (safeStorage.isEncryptionAvailable()) {
+      return safeStorage.decryptString(data);
+    } else {
+      return data.toString('utf-8');
+    }
+  } catch {
+    return null;
+  }
+}
+
+// Clear auth token
+async function clearAuthToken() {
+  try {
+    const tokenPath = getAuthTokenPath();
+    await fs.unlink(tokenPath);
+  } catch {
+    // Ignore if file doesn't exist
+  }
+}
+
+// macOS: Handle protocol URL when app is already running
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  handleAuthCallback(url);
+});
+
+// Windows/Linux: Handle protocol URL via second instance
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (event, commandLine) => {
+    // Find the URL in command line args
+    const url = commandLine.find(arg => arg.startsWith('simplereader://'));
+    if (url) {
+      handleAuthCallback(url);
+    }
+    // Focus the main window
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
 
 function createWindow() {
   // Create the browser window with Mac-friendly settings
@@ -211,4 +319,30 @@ ipcMain.handle('import-book', async (event, originalPath) => {
     console.error('Error importing book:', error);
     throw new Error(`Failed to import book: ${error.message}`);
   }
+});
+
+// ========== Auth IPC Handlers ==========
+
+// Get stored auth token
+ipcMain.handle('auth-get-token', async () => {
+  return await loadAuthToken();
+});
+
+// Store auth token
+ipcMain.handle('auth-set-token', async (event, token) => {
+  await saveAuthToken(token);
+  return true;
+});
+
+// Clear auth token (logout)
+ipcMain.handle('auth-clear-token', async () => {
+  await clearAuthToken();
+  return true;
+});
+
+// Open login URL in system browser
+ipcMain.handle('auth-open-login', async () => {
+  const loginUrl = `${AUTH_BASE_URL}/api/auth/login?electron=true`;
+  await shell.openExternal(loginUrl);
+  return true;
 });

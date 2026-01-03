@@ -12,6 +12,7 @@ const WindowsIcon = () => (
 
 export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [showDownloadOptions, setShowDownloadOptions] = useState(false);
 
   const features = [
     {
@@ -34,7 +35,7 @@ export default function LandingPage() {
   const faqs = [
     {
       question: 'Is Simple Reader really free?',
-      answer: 'Yes, completely free. No subscriptions, no hidden costs, no ads. We built this because we love reading and wanted a better way to understand complex books.',
+      answer: 'Yes, completely free. Just sign in with Google so we can provide you a personalized experience. No subscriptions, no hidden costs, no ads.',
     },
     {
       question: 'What file formats are supported?',
@@ -110,7 +111,7 @@ export default function LandingPage() {
             No more tab-switching, no more losing your place.
           </p>
 
-          {/* Download Buttons */}
+          {/* CTA Buttons */}
           <div
             className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-up"
             style={{
@@ -118,29 +119,71 @@ export default function LandingPage() {
               animationFillMode: 'backwards',
             }}
           >
+            {/* Primary: Start reading in browser */}
             <a
-              href="#download"
+              href="/api/auth/login"
               className="group flex items-center gap-3 px-8 py-4 rounded-xl text-lg font-medium transition-all duration-300 hover:scale-105"
               style={{
                 background: 'var(--foreground)',
                 color: 'var(--background)',
               }}
             >
-              <Apple className="w-5 h-5" />
-              Download for Mac
+              Start reading
             </a>
-            <a
-              href="#download"
-              className="group flex items-center gap-3 px-8 py-4 rounded-xl text-lg font-medium transition-all duration-300 hover:scale-105"
-              style={{
-                background: 'var(--surface)',
-                color: 'var(--foreground)',
-                border: '1px solid var(--border)',
-              }}
-            >
-              <WindowsIcon />
-              Download for Windows
-            </a>
+
+            {/* Secondary: Download app with dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowDownloadOptions(!showDownloadOptions)}
+                className="group flex items-center gap-3 px-8 py-4 rounded-xl text-lg font-medium transition-all duration-300 hover:scale-105"
+                style={{
+                  background: 'var(--surface)',
+                  color: 'var(--foreground)',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                <Download className="w-5 h-5" />
+                Download app
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform duration-200 ${showDownloadOptions ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {/* Dropdown */}
+              {showDownloadOptions && (
+                <div
+                  className="absolute top-full left-0 right-0 mt-2 rounded-xl overflow-hidden shadow-lg animate-fade-in"
+                  style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  <a
+                    href="https://github.com/AkshayPall/reader/releases/latest"
+                    className="flex items-center gap-3 px-6 py-3 transition-colors"
+                    style={{ color: 'var(--foreground)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--background-muted)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <Apple className="w-5 h-5" />
+                    macOS
+                  </a>
+                  <a
+                    href="https://github.com/AkshayPall/reader/releases/latest"
+                    className="flex items-center gap-3 px-6 py-3 transition-colors"
+                    style={{
+                      color: 'var(--foreground)',
+                      borderTop: '1px solid var(--border-subtle)',
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--background-muted)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <WindowsIcon />
+                    Windows
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Free badge */}
@@ -152,7 +195,7 @@ export default function LandingPage() {
               animationFillMode: 'backwards',
             }}
           >
-            Free to use. No account required.
+            Free to use. Sign in with Google to get started.
           </p>
         </div>
 
@@ -392,35 +435,49 @@ export default function LandingPage() {
             className="text-lg mb-10"
             style={{ color: 'var(--foreground-muted)' }}
           >
-            Free download. No account needed. Just you and your books.
+            Free to use. Sign in with Google and start reading.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            {/* Primary: Start reading in browser */}
             <a
-              href="https://github.com/yourusername/reader/releases/latest"
+              href="/api/auth/login"
               className="group flex items-center gap-3 px-8 py-4 rounded-xl text-lg font-medium transition-all duration-300 hover:scale-105"
               style={{
                 background: 'var(--foreground)',
                 color: 'var(--background)',
               }}
             >
-              <Apple className="w-5 h-5" />
-              Download for Mac
-              <Download className="w-4 h-4 opacity-50" />
+              Start reading
             </a>
-            <a
-              href="https://github.com/yourusername/reader/releases/latest"
-              className="group flex items-center gap-3 px-8 py-4 rounded-xl text-lg font-medium transition-all duration-300 hover:scale-105"
-              style={{
-                background: 'var(--background)',
-                color: 'var(--foreground)',
-                border: '1px solid var(--border)',
-              }}
-            >
-              <WindowsIcon />
-              Download for Windows
-              <Download className="w-4 h-4 opacity-50" />
-            </a>
+
+            {/* Secondary: Download links */}
+            <div className="flex gap-3">
+              <a
+                href="https://github.com/AkshayPall/reader/releases/latest"
+                className="flex items-center gap-2 px-6 py-4 rounded-xl font-medium transition-all duration-300 hover:scale-105"
+                style={{
+                  background: 'var(--background)',
+                  color: 'var(--foreground)',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                <Apple className="w-5 h-5" />
+                Mac
+              </a>
+              <a
+                href="https://github.com/AkshayPall/reader/releases/latest"
+                className="flex items-center gap-2 px-6 py-4 rounded-xl font-medium transition-all duration-300 hover:scale-105"
+                style={{
+                  background: 'var(--background)',
+                  color: 'var(--foreground)',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                <WindowsIcon />
+                Windows
+              </a>
+            </div>
           </div>
         </div>
       </section>

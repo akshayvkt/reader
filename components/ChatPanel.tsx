@@ -5,7 +5,7 @@ import { X, ArrowUp, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useChat } from '../contexts/ChatContext';
 import { ChatMessage, ContextScope } from '../types/chat';
-import { getApiUrl } from '../lib/api';
+import { getApiUrl, getAuthHeaders } from '../lib/api';
 
 const SCOPE_OPTIONS: { value: ContextScope; label: string }[] = [
   { value: 'highlight', label: 'Highlight' },
@@ -125,9 +125,10 @@ export default function ChatPanel() {
     }
 
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(getApiUrl('/api/simplify'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           text: userMessage.content,
           mode: 'followup',
