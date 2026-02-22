@@ -35,6 +35,10 @@ class ReaderHostingController: UIViewController {
         navigator.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(navigator.view)
         navigator.didMove(toParent: self)
+
+        // Push EPUB content inward so text is never behind the floating toolbar/bottom bar.
+        // These values add padding beyond the system safe area (Dynamic Island, home indicator).
+        navigator.additionalSafeAreaInsets = UIEdgeInsets(top: 50, left: 0, bottom: 40, right: 0)
     }
 
     // MARK: - Custom Editing Actions

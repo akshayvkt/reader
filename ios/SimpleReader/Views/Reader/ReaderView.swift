@@ -74,28 +74,13 @@ struct ReaderView: View {
                     )
                     Spacer()
 
-                    // Bottom progress bar
+                    // Bottom page indicator (Apple Books style)
                     if let progress = currentLocator?.locations.totalProgression {
-                        HStack {
-                            GeometryReader { geo in
-                                ZStack(alignment: .leading) {
-                                    Rectangle()
-                                        .fill(DesignSystem.Colors.border.opacity(0.5))
-                                        .frame(height: 2)
-                                    Rectangle()
-                                        .fill(DesignSystem.Colors.accent)
-                                        .frame(width: geo.size.width * progress, height: 2)
-                                }
-                            }
-                            .frame(height: 2)
-
-                            Text("\(Int(progress * 100))%")
-                                .font(.caption2)
-                                .foregroundStyle(DesignSystem.Colors.foregroundSubtle)
-                                .frame(width: 35)
-                        }
-                        .padding(.horizontal, DesignSystem.Spacing.xl)
-                        .padding(.bottom, DesignSystem.Spacing.sm)
+                        Text("\(Int(progress * 100))%")
+                            .font(.caption)
+                            .foregroundStyle(DesignSystem.Colors.foregroundSubtle)
+                            .frame(maxWidth: .infinity)
+                            .padding(.bottom, DesignSystem.Spacing.sm)
                     }
                 }
                 .transition(.opacity)
