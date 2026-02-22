@@ -107,5 +107,12 @@ struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
         func navigator(_ navigator: any Navigator, locationDidChange locator: Locator) {
             parent.onPositionChanged(locator)
         }
+
+        // MARK: - VisualNavigatorDelegate (tap handling)
+
+        func navigator(_ navigator: VisualNavigator, didTapAt point: CGPoint) {
+            // Toggle toolbar on tap — point is relative to the navigator's view
+            parent.onCenterTap()
+        }
     }
 }
