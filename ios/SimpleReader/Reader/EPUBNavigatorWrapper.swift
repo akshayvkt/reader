@@ -8,6 +8,7 @@ struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
     let publication: Publication
     let initialLocator: Locator?
     let preferences: ReadingPreferences
+    let httpServer: HTTPServer
 
     /// Called when user selects text and taps Explain/ELI5
     var onSelectionAction: (String, SimplifyMode) -> Void
@@ -22,10 +23,10 @@ struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
         // Build Readium preferences from our model
         let epubPrefs = buildEPUBPreferences()
 
-        // Configure custom editing actions for text selection menu
+        // Configure custom editing actions — keep defaults (copy, share, lookup) + add ours
         let config = EPUBNavigatorViewController.Configuration(
             preferences: epubPrefs,
-            editingActions: [
+            editingActions: EditingAction.defaultActions + [
                 EditingAction(title: "Explain", action: #selector(ReaderHostingController.explainSelection)),
                 EditingAction(title: "ELI5", action: #selector(ReaderHostingController.eli5Selection)),
             ]
@@ -34,7 +35,8 @@ struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
         let navigator = try! EPUBNavigatorViewController(
             publication: publication,
             initialLocation: initialLocator,
-            config: config
+            config: config,
+            httpServer: httpServer
         )
 
         navigator.delegate = context.coordinator
@@ -64,12 +66,12 @@ struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
 
     private func buildEPUBPreferences() -> EPUBPreferences {
         var prefs = EPUBPreferences()
-        prefs.fontSize = preferences.fontSize.points
+        prefs.fontSize = preferences.fontSize.readiumMultiplier
         prefs.lineHeight = preferences.lineSpacing
 
         // Map our font family to Readium's font family
         if preferences.fontFamily != .system {
-            prefs.fontFamily = FontFamily(rawValue: preferences.fontFamily.readiumName)
+            prefs.fontFamily = ReadiumNavigator.FontFamily(rawValue: preferences.fontFamily.readiumName)
         }
 
         // Map theme
@@ -95,7 +97,12 @@ struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
             self.parent = parent
         }
 
-        // MARK: - NavigatorDelegate
+        // MARK: - NavigatorDelegate (required)
+
+        func navigator(_ navigator: any Navigator, presentError error: NavigatorError) {
+            // Log errors for now — can surface to UI later
+            print("Navigator error: \(error.localizedDescription)")
+        }
 
         func navigator(_ navigator: any Navigator, locationDidChange locator: Locator) {
             parent.onPositionChanged(locator)

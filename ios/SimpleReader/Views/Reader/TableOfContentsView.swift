@@ -4,9 +4,9 @@ import ReadiumShared
 /// Slide-in table of contents sidebar.
 /// Ports ChapterNav.tsx: recursive chapter rendering, current highlighted, navigation.
 struct TableOfContentsView: View {
-    let toc: [Link]
+    let toc: [ReadiumShared.Link]
     let currentHref: String?
-    let onNavigate: (Link) -> Void
+    let onNavigate: (ReadiumShared.Link) -> Void
 
     @Environment(\.dismiss) private var dismiss
 
@@ -44,14 +44,15 @@ struct TableOfContentsView: View {
 // MARK: - Recursive TOC Item Row
 
 private struct TocItemRow: View {
-    let link: Link
+    let link: ReadiumShared.Link
     let currentHref: String?
     let depth: Int
-    let onNavigate: (Link) -> Void
+    let onNavigate: (ReadiumShared.Link) -> Void
 
     private var isCurrent: Bool {
         guard let currentHref = currentHref else { return false }
-        let linkHref = link.href.string.split(separator: "#").first.map(String.init) ?? link.href.string
+        // Link.href is String in Readium 3.7 (not a URL type)
+        let linkHref = link.href.split(separator: "#").first.map(String.init) ?? link.href
         let currentBase = currentHref.split(separator: "#").first.map(String.init) ?? currentHref
         return linkHref == currentBase
     }

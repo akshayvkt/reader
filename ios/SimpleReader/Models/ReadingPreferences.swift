@@ -114,6 +114,10 @@ class ReadingPreferences {
 
         var points: CGFloat { CGFloat(rawValue) }
 
+        /// Convert pixel size to Readium's font size multiplier.
+        /// Readium uses 1.0 = 100% (default ~16px base), so 18px → 1.125
+        var readiumMultiplier: Double { Double(rawValue) / 16.0 }
+
         static func < (lhs: FontSizeLevel, rhs: FontSizeLevel) -> Bool {
             lhs.rawValue < rhs.rawValue
         }

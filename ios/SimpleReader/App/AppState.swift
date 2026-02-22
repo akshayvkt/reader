@@ -8,11 +8,17 @@ class AppState {
 
     // MARK: - Services
 
-    let authService = AuthService()
+    let authService: AuthService
     let readiumService = ReadiumService()
     let library = BookLibrary()
     let preferences = ReadingPreferences()
-    private(set) lazy var apiClient = APIClient(authService: authService)
+    let apiClient: APIClient
+
+    init() {
+        let auth = AuthService()
+        self.authService = auth
+        self.apiClient = APIClient(authService: auth)
+    }
 
     // MARK: - Navigation
 

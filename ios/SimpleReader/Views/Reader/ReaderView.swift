@@ -43,6 +43,7 @@ struct ReaderView: View {
                 publication: publication,
                 initialLocator: restoreLocator(),
                 preferences: preferences,
+                httpServer: appState.readiumService.httpServer,
                 onSelectionAction: { text, mode in
                     selectedText = text
                     selectionMode = mode
@@ -130,9 +131,9 @@ struct ReaderView: View {
         // Table of contents
         .sheet(isPresented: $showTableOfContents) {
             TableOfContentsView(
-                toc: publication.tableOfContents,
+                toc: publication.manifest.tableOfContents,
                 currentHref: currentLocator?.href.string,
-                onNavigate: { link in
+                onNavigate: { _ in
                     // Navigation handled via coordinator
                     showTableOfContents = false
                 }
@@ -166,17 +167,15 @@ struct ReaderView: View {
     // MARK: - Position Save/Restore
 
     private func restoreLocator() -> Locator? {
-        guard let json = book.locatorJSON,
-              let data = json.data(using: .utf8) else { return nil }
-        return try? JSONDecoder().decode(Locator.self, from: data)
+        guard let json = book.locatorJSON else { return nil }
+        // Locator is NOT Codable — uses custom jsonString init
+        return try? Locator(jsonString: json)
     }
 
     private func saveProgress(_ locator: Locator) {
         let progress = locator.locations.totalProgression ?? 0
-        let locatorJSON: String? = {
-            guard let data = try? JSONEncoder().encode(locator) else { return nil }
-            return String(data: data, encoding: .utf8)
-        }()
+        // Locator is NOT Codable — uses custom jsonString property
+        let locatorJSON = locator.jsonString
         appState.library.updateProgress(
             bookId: book.id,
             progress: progress,
@@ -187,12 +186,13 @@ struct ReaderView: View {
     private func updateChapterTitle(from locator: Locator) {
         // Find the matching TOC entry
         let href = locator.href.string.split(separator: "#").first.map(String.init) ?? locator.href.string
-        currentChapterTitle = findTocTitle(in: publication.tableOfContents, matching: href)
+        currentChapterTitle = findTocTitle(in: publication.manifest.tableOfContents, matching: href)
     }
 
-    private func findTocTitle(in links: [Link], matching href: String) -> String? {
+    private func findTocTitle(in links: [ReadiumShared.Link], matching href: String) -> String? {
         for link in links {
-            let linkHref = link.href.string.split(separator: "#").first.map(String.init) ?? link.href.string
+            // Link.href is String in Readium 3.7 (not a URL type)
+            let linkHref = link.href.split(separator: "#").first.map(String.init) ?? link.href
             if linkHref == href {
                 return link.title
             }

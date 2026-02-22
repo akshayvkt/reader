@@ -131,10 +131,15 @@ struct SearchPanelView: View {
         defer { isSearching = false }
 
         do {
+            // search() returns Result<SearchIterator, SearchError>
             let iterator = try await publication.search(query: query).get()
             var allResults: [SearchResultItem] = []
 
-            while let collection = try await iterator.next() {
+            // iterator.next() returns Result<LocatorCollection?, SearchError>
+            // nil LocatorCollection means end of results
+            while true {
+                guard let collection = try await iterator.next().get() else { break }
+
                 for locator in collection.locators {
                     let excerpt = [
                         locator.text.before,

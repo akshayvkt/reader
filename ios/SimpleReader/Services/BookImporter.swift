@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import CryptoKit
 import ReadiumShared
 import ReadiumStreamer
@@ -32,9 +33,9 @@ enum BookImporter {
         let title = publication.metadata.title ?? url.deletingPathExtension().lastPathComponent
         let author = publication.metadata.authors.first?.name ?? "Unknown Author"
 
-        // Extract cover image
+        // Extract cover image — cover() returns ReadResult<UIImage?>
         var coverData: Data?
-        if let cover = try? await publication.cover() {
+        if let cover = try? await publication.cover().get() {
             coverData = cover.pngData()
         }
 

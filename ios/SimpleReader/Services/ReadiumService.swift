@@ -1,7 +1,6 @@
 import Foundation
 import ReadiumShared
 import ReadiumStreamer
-import ReadiumNavigator
 import ReadiumAdapterGCDWebServer
 
 /// Manages Readium toolkit setup: opening publications, creating navigators.
@@ -12,28 +11,28 @@ class ReadiumService {
     private let assetRetriever: AssetRetriever
     private let publicationOpener: PublicationOpener
 
+    /// HTTP server required by EPUBNavigatorViewController to serve EPUB resources
+    let httpServer: HTTPServer
+
     init() {
         httpClient = DefaultHTTPClient()
         assetRetriever = AssetRetriever(httpClient: httpClient)
-        publicationOpener = PublicationOpener(
-            parser: DefaultPublicationParser(
-                httpClient: httpClient,
-                assetRetriever: assetRetriever,
-                pdfFactory: nil
-            )
-        )
+        httpServer = GCDHTTPServer(assetRetriever: assetRetriever)
+        // Use EPUBParser directly since we only need EPUB support
+        // (DefaultPublicationParser requires a PDFDocumentFactory)
+        publicationOpener = PublicationOpener(parser: EPUBParser())
     }
 
     /// Open an EPUB publication from a file URL.
     /// The caller must ensure security-scoped access is active.
     func openPublication(at url: URL) async throws -> Publication {
-        let absoluteURL = url.absoluteURL
-
-        guard let readiumURL = try? AbsoluteURL(url: absoluteURL) else {
+        // FileURL is the concrete type for file:// URLs in Readium
+        // (AbsoluteURL is a protocol, not directly constructible)
+        guard let fileURL = FileURL(url: url) else {
             throw ReadiumError.invalidURL
         }
 
-        let asset = try await assetRetriever.retrieve(url: readiumURL).get()
+        let asset = try await assetRetriever.retrieve(url: fileURL).get()
         let publication = try await publicationOpener.open(
             asset: asset,
             allowUserInteraction: false
