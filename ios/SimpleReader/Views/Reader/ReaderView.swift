@@ -9,7 +9,7 @@ struct ReaderView: View {
     let book: RecentBook
     let publication: Publication
 
-    @State private var showToolbar = true
+    @State private var showToolbar = false
     @State private var preferences: ReadingPreferences
 
     // Text selection / AI popup state
