@@ -1,34 +1,25 @@
 import SwiftUI
 
-/// "Continue Reading" hero card for the most recently opened book.
-/// Ports HeroBookCard.tsx: large cover, title in Libre Baskerville, progress bar, "Resume" CTA.
+/// "Continue" row for the most recently opened book.
 struct HeroBookCard: View {
     let book: RecentBook
     let onTap: () -> Void
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: DesignSystem.Spacing.xl) {
-                // Cover
+            HStack(spacing: DesignSystem.Spacing.lg) {
                 BookCoverView(
                     title: book.title,
                     coverData: book.coverImageData,
                     size: .large
                 )
-                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 8)
 
-                // Info
-                VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
-                    Text("Continue Reading")
-                        .font(.caption)
-                        .foregroundStyle(DesignSystem.Colors.accent)
-                        .textCase(.uppercase)
-                        .tracking(0.5)
-
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
                     Text(book.title)
                         .font(DesignSystem.Fonts.cardTitle)
                         .foregroundStyle(DesignSystem.Colors.foreground)
-                        .lineLimit(2)
+                        .lineLimit(3)
                         .multilineTextAlignment(.leading)
 
                     Text(book.author)
@@ -36,48 +27,38 @@ struct HeroBookCard: View {
                         .foregroundStyle(DesignSystem.Colors.foregroundMuted)
                         .lineLimit(1)
 
-                    Spacer()
+                    Spacer(minLength: DesignSystem.Spacing.lg)
 
-                    // Progress bar
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
-                                Rectangle()
-                                    .fill(DesignSystem.Colors.border)
-                                    .frame(height: 1.5)
+                                Capsule()
+                                    .fill(DesignSystem.Colors.borderSubtle)
+                                    .frame(height: 3)
 
-                                Rectangle()
+                                Capsule()
                                     .fill(DesignSystem.Colors.accent)
-                                    .frame(width: geo.size.width * book.progress, height: 1.5)
+                                    .frame(width: max(geo.size.width * book.progress, book.progress > 0 ? 6 : 0), height: 3)
                             }
                         }
-                        .frame(height: 1.5)
+                        .frame(height: 3)
 
-                        Text("\(Int(book.progress * 100))%")
-                            .font(.caption2)
-                            .foregroundStyle(DesignSystem.Colors.foregroundSubtle)
-                    }
+                        HStack(spacing: DesignSystem.Spacing.xs) {
+                            Text(book.progress > 0 ? "\(Int(book.progress * 100))%" : "Start")
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(DesignSystem.Colors.foregroundMuted)
 
-                    // Resume CTA
-                    HStack(spacing: 4) {
-                        Text("Resume")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(DesignSystem.Colors.accent)
-                        Image(systemName: "arrow.right")
-                            .font(.caption)
-                            .foregroundStyle(DesignSystem.Colors.accent)
+                            Image(systemName: "chevron.right")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(DesignSystem.Colors.foregroundSubtle)
+                        }
                     }
                 }
             }
-            .padding(DesignSystem.Spacing.xl)
+            .padding(DesignSystem.Spacing.lg)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(DesignSystem.Colors.surface)
-            .cornerRadius(DesignSystem.CornerRadius.large)
-            .overlay(
-                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.large)
-                    .stroke(DesignSystem.Colors.border, lineWidth: 0.5)
-            )
-            .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
     }

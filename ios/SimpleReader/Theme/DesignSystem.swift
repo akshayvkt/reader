@@ -16,7 +16,7 @@ enum DesignSystem {
         static let foreground = Color("Foreground")
         static let foregroundMuted = Color("ForegroundMuted")
         static let foregroundSubtle = Color("ForegroundSubtle")
-        static let accent = Color("Accent")
+        static let accent = Color("AccentColor")
         static let accentHover = Color("AccentHover")
         static let accentLight = Color("AccentLight")
         static let accentSubtle = Color("AccentSubtle")
@@ -25,70 +25,57 @@ enum DesignSystem {
 
         // Fixed colors for when we need explicit light/dark values
         enum Light {
-            static let background = Color(hex: "FAF7F2")
-            static let backgroundMuted = Color(hex: "F5F0E8")
-            static let surface = Color(hex: "FFFCF7")
-            static let foreground = Color(hex: "2D2A26")
-            static let foregroundMuted = Color(hex: "6B6560")
-            static let foregroundSubtle = Color(hex: "9A9590")
-            static let accent = Color(hex: "C4785C")
-            static let accentHover = Color(hex: "B36A4E")
-            static let accentLight = Color(hex: "E8C4B5")
-            static let accentSubtle = Color(hex: "F5E6DE")
-            static let link = Color(hex: "2E7D6B")
-            static let border = Color(hex: "E8E2D9")
-            static let borderSubtle = Color(hex: "F0EBE3")
+            static let background = Color(hex: "F7F7F5")
+            static let backgroundMuted = Color(hex: "EFEFED")
+            static let surface = Color(hex: "FFFFFF")
+            static let foreground = Color(hex: "111111")
+            static let foregroundMuted = Color(hex: "5F5F63")
+            static let foregroundSubtle = Color(hex: "9B9BA1")
+            static let accent = Color(hex: "FF8A00")
+            static let accentHover = Color(hex: "E57900")
+            static let accentLight = Color(hex: "FFD59A")
+            static let accentSubtle = Color(hex: "FFF0DA")
+            static let link = Color(hex: "0A84FF")
+            static let border = Color(hex: "D9D9DD")
+            static let borderSubtle = Color(hex: "ECECEF")
         }
 
         enum Dark {
-            static let background = Color(hex: "1F1D1A")
-            static let backgroundMuted = Color(hex: "3A3632")
-            static let surface = Color(hex: "292724")
-            static let foreground = Color(hex: "EDE9E3")
-            static let foregroundMuted = Color(hex: "B0AAA0")
-            static let foregroundSubtle = Color(hex: "7A756C")
-            static let accent = Color(hex: "D4907A")
-            static let accentHover = Color(hex: "E0A08C")
-            static let accentLight = Color(hex: "3D3530")
-            static let accentSubtle = Color(hex: "2E2A27")
-            static let link = Color(hex: "C9A892")
-            static let border = Color(hex: "3A3632")
-            static let borderSubtle = Color(hex: "2F2C29")
+            static let background = Color(hex: "000000")
+            static let backgroundMuted = Color(hex: "1C1C1E")
+            static let surface = Color(hex: "1C1C1E")
+            static let foreground = Color(hex: "F5F5F7")
+            static let foregroundMuted = Color(hex: "B8B8BE")
+            static let foregroundSubtle = Color(hex: "7F7F86")
+            static let accent = Color(hex: "FF9F0A")
+            static let accentHover = Color(hex: "FFB340")
+            static let accentLight = Color(hex: "4A3217")
+            static let accentSubtle = Color(hex: "2B2117")
+            static let link = Color(hex: "0A84FF")
+            static let border = Color(hex: "343438")
+            static let borderSubtle = Color(hex: "252529")
         }
 
         // 8 deterministic cover placeholder colors (from BookCover.tsx)
         static let coverPlaceholders: [Color] = [
-            Color(hex: "8B7355"), // warm brown
-            Color(hex: "6B8E7B"), // sage teal
-            Color(hex: "7B6B8E"), // dusty purple
-            Color(hex: "A69070"), // camel
-            Color(hex: "6B7B5E"), // olive green
-            Color(hex: "8E6B7B"), // mauve
-            Color(hex: "5E6B7B"), // slate blue
-            Color(hex: "7B7B5E"), // khaki
+            Color(hex: "C25B4E"),
+            Color(hex: "2F7D6E"),
+            Color(hex: "6456A3"),
+            Color(hex: "B7772D"),
+            Color(hex: "4D7A3F"),
+            Color(hex: "A94375"),
+            Color(hex: "366D9F"),
+            Color(hex: "7B7A34"),
         ]
     }
 
     // MARK: - Fonts
 
     enum Fonts {
-        static func libreBaskerville(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-            switch weight {
-            case .bold:
-                return .custom("LibreBaskerville-Bold", size: size)
-            default:
-                return .custom("LibreBaskerville-Regular", size: size)
-            }
-        }
-
-        static func libreBaskervilleItalic(_ size: CGFloat) -> Font {
-            .custom("LibreBaskerville-Italic", size: size)
-        }
-
-        static let title = libreBaskerville(28, weight: .regular)
-        static let heading = libreBaskerville(20, weight: .regular)
-        static let cardTitle = libreBaskerville(18, weight: .regular)
-        static let smallTitle = libreBaskerville(15, weight: .regular)
+        static let title = Font.system(.largeTitle, design: .default).weight(.bold)
+        static let heading = Font.system(.title3, design: .default).weight(.semibold)
+        static let cardTitle = Font.system(.headline, design: .default)
+        static let smallTitle = Font.system(.subheadline, design: .default).weight(.medium)
     }
 
     // MARK: - Spacing

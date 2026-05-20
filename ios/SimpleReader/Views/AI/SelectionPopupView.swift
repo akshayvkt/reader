@@ -63,7 +63,7 @@ struct SelectionPopupView: View {
                             .padding(.vertical, DesignSystem.Spacing.xl)
                         Spacer()
                     }
-                } else if let response = response {
+                } else if response != nil {
                     messagesView
                 } else {
                     Text("Failed to get explanation. Please try again.")

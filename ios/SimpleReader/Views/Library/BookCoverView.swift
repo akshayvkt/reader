@@ -1,7 +1,6 @@
 import SwiftUI
 
 /// Displays a book cover image, or a colored placeholder with the title.
-/// Ports BookCover.tsx: deterministic color from title hash, same 8 colors.
 struct BookCoverView: View {
     let title: String
     let coverData: Data?
@@ -12,8 +11,8 @@ struct BookCoverView: View {
 
         var width: CGFloat {
             switch self {
-            case .small: return 100
-            case .large: return 120
+            case .small: return 102
+            case .large: return 118
             }
         }
 
@@ -21,8 +20,8 @@ struct BookCoverView: View {
 
         var titleFont: Font {
             switch self {
-            case .small: return .system(size: 12, weight: .medium)
-            case .large: return .system(size: 14, weight: .medium)
+            case .small: return .system(size: 12, weight: .semibold)
+            case .large: return .system(size: 14, weight: .semibold)
             }
         }
     }
@@ -34,12 +33,26 @@ struct BookCoverView: View {
                 .aspectRatio(contentMode: .fill)
                 .frame(width: size.width, height: size.height)
                 .clipped()
-                .cornerRadius(DesignSystem.CornerRadius.small)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         } else {
-            // Placeholder with deterministic color
             ZStack(alignment: .bottomLeading) {
-                placeholderColor
-                    .frame(width: size.width, height: size.height)
+                LinearGradient(
+                    colors: [placeholderColor.opacity(0.92), placeholderColor],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .frame(width: size.width, height: size.height)
+
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                    Rectangle()
+                        .fill(.white.opacity(0.42))
+                        .frame(width: size.width * 0.42, height: 2)
+                    Rectangle()
+                        .fill(.white.opacity(0.28))
+                        .frame(width: size.width * 0.28, height: 2)
+                    Spacer()
+                }
+                .padding(10)
 
                 Text(title)
                     .font(size.titleFont)
@@ -47,7 +60,7 @@ struct BookCoverView: View {
                     .lineLimit(3)
                     .padding(10)
             }
-            .cornerRadius(DesignSystem.CornerRadius.small)
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
     }
 

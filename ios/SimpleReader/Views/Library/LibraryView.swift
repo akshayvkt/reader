@@ -2,7 +2,6 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// Main home screen with recent books library.
-/// Ports page.tsx home section: hero card, recent grid, add button, empty state.
 struct LibraryView: View {
     @Environment(AppState.self) private var appState
     @State private var showFilePicker = false
@@ -23,29 +22,26 @@ struct LibraryView: View {
                     }
                 }
                 .padding(.horizontal, DesignSystem.Spacing.xl)
-                .padding(.top, DesignSystem.Spacing.md)
+                .padding(.top, DesignSystem.Spacing.sm)
+                .padding(.bottom, DesignSystem.Spacing.xxxl)
             }
             .background(DesignSystem.Colors.background)
-            .navigationTitle("")
+            .navigationTitle("Library")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Text("Reader")
-                        .font(DesignSystem.Fonts.heading)
-                        .foregroundStyle(DesignSystem.Colors.foreground)
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showFilePicker = true
                     } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "plus")
-                            Text("Add Book")
-                        }
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(DesignSystem.Colors.accent)
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(DesignSystem.Colors.accent)
                     }
+                    .accessibilityLabel("Add Book")
                 }
             }
+            .tint(DesignSystem.Colors.accent)
             .fileImporter(
                 isPresented: $showFilePicker,
                 allowedContentTypes: [UTType(filenameExtension: "epub") ?? .data],
@@ -76,21 +72,23 @@ struct LibraryView: View {
 
     @ViewBuilder
     private var booksContent: some View {
-        // Hero card for most recent book
         if let mostRecent = appState.library.mostRecent {
-            HeroBookCard(book: mostRecent) {
-                appState.openBook(mostRecent)
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
+                Text("Continue")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(DesignSystem.Colors.foreground)
+
+                HeroBookCard(book: mostRecent) {
+                    appState.openBook(mostRecent)
+                }
             }
         }
 
-        // Recent books grid
         if !appState.library.recentBooks.isEmpty {
             VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
-                Text("Recent")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(DesignSystem.Colors.foregroundMuted)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
+                Text("Recent Books")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(DesignSystem.Colors.foreground)
 
                 LazyVGrid(columns: columns, spacing: DesignSystem.Spacing.xl) {
                     ForEach(appState.library.recentBooks) { book in
@@ -106,35 +104,35 @@ struct LibraryView: View {
     // MARK: - Empty State
 
     private var emptyState: some View {
-        VStack(spacing: DesignSystem.Spacing.lg) {
-            Spacer().frame(height: 100)
+        VStack(spacing: DesignSystem.Spacing.md) {
+            Spacer().frame(height: 180)
 
-            Image(systemName: "book.pages")
-                .font(.system(size: 48, weight: .light))
+            Image(systemName: "books.vertical.fill")
+                .font(.system(size: 52, weight: .regular))
+                .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(DesignSystem.Colors.accent)
-                .frame(width: 80, height: 80)
-                .background(DesignSystem.Colors.accentSubtle)
-                .cornerRadius(DesignSystem.CornerRadius.large)
+                .frame(width: 92, height: 92)
 
-            Text("Add your book")
-                .font(DesignSystem.Fonts.heading)
+            Text("No Books")
+                .font(.title2.weight(.semibold))
                 .foregroundStyle(DesignSystem.Colors.foreground)
+                .padding(.top, DesignSystem.Spacing.sm)
 
             Text("EPUB files")
-                .font(.subheadline)
+                .font(.body)
                 .foregroundStyle(DesignSystem.Colors.foregroundMuted)
 
             Button {
                 showFilePicker = true
             } label: {
-                Text("Browse Files")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(DesignSystem.Colors.accent)
-                    .padding(.horizontal, DesignSystem.Spacing.xxl)
-                    .padding(.vertical, DesignSystem.Spacing.md)
-                    .background(DesignSystem.Colors.accentSubtle)
-                    .cornerRadius(DesignSystem.CornerRadius.medium)
+                Label("Add Book", systemImage: "plus")
+                    .font(.headline)
+                    .padding(.horizontal, DesignSystem.Spacing.xl)
             }
+            .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.capsule)
+            .tint(DesignSystem.Colors.accent)
+            .padding(.top, DesignSystem.Spacing.sm)
 
             Spacer()
         }

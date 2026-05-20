@@ -29,10 +29,10 @@ class ReadingPreferences {
     init() {
         let defaults = UserDefaults.standard
         self.fontFamily = FontFamily(rawValue: defaults.string(forKey: Self.fontKey) ?? "") ?? .charter
-        self.fontSize = FontSizeLevel(rawValue: defaults.integer(forKey: Self.sizeKey)) ?? .large
+        self.fontSize = FontSizeLevel(rawValue: defaults.integer(forKey: Self.sizeKey)) ?? .medium
         self.lineSpacing = defaults.object(forKey: Self.spacingKey) != nil
             ? defaults.double(forKey: Self.spacingKey)
-            : 1.8
+            : 1.55
         self.theme = ThemeMode(rawValue: defaults.string(forKey: Self.themeKey) ?? "") ?? .auto
     }
 

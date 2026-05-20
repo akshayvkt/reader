@@ -9,6 +9,11 @@ import ReadiumShared
 /// Custom text selection actions ("Explain", "ELI5") target methods on this controller.
 class ReaderHostingController: UIViewController {
 
+    private enum Layout {
+        static let topReadingChrome: CGFloat = 54
+        static let bottomReadingChrome: CGFloat = 76
+    }
+
     let navigator: EPUBNavigatorViewController
 
     /// Callback when user taps "Explain" or "ELI5" on selected text
@@ -30,21 +35,24 @@ class ReaderHostingController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // Black background fills the gaps around the navigator (status bar, home indicator area)
-        view.backgroundColor = .black
+        view.backgroundColor = .systemBackground
 
         addChild(navigator)
         view.addSubview(navigator.view)
         navigator.didMove(toParent: self)
 
-        // Pin navigator within safe area + extra padding so EPUB text is never behind
-        // the floating toolbar (top) or page indicator (bottom).
         navigator.view.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            navigator.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 44),
+            navigator.view.topAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.topAnchor,
+                constant: Layout.topReadingChrome
+            ),
             navigator.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             navigator.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            navigator.view.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -30),
+            navigator.view.bottomAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.bottomAnchor,
+                constant: -Layout.bottomReadingChrome
+            ),
         ])
     }
 
@@ -52,21 +60,21 @@ class ReaderHostingController: UIViewController {
 
     /// Called when user taps "Explain" in the text selection menu
     @objc func explainSelection() {
-        guard let selection = (navigator as? SelectableNavigator)?.currentSelection,
+        guard let selection = navigator.currentSelection,
               let text = selection.locator.text.highlight, !text.isEmpty else { return }
         onSelectionAction?(text, .explain)
     }
 
     /// Called when user taps "ELI5" in the text selection menu
     @objc func eli5Selection() {
-        guard let selection = (navigator as? SelectableNavigator)?.currentSelection,
+        guard let selection = navigator.currentSelection,
               let text = selection.locator.text.highlight, !text.isEmpty else { return }
         onSelectionAction?(text, .eli5)
     }
 
     override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
         if action == #selector(explainSelection) || action == #selector(eli5Selection) {
-            return (navigator as? SelectableNavigator)?.currentSelection != nil
+            return navigator.currentSelection != nil
         }
         return super.canPerformAction(action, withSender: sender)
     }

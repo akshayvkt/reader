@@ -24,6 +24,7 @@ struct SimpleReaderApp: App {
                         .environment(appState)
                 }
             }
+            .tint(DesignSystem.Colors.accent)
             .preferredColorScheme(appState.preferences.colorSchemeOverride)
             .task {
                 appState.onLaunch()

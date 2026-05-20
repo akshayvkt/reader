@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 import ReadiumShared
 import ReadiumNavigator
 
@@ -43,6 +44,9 @@ struct ReaderView: View {
 
     var body: some View {
         ZStack {
+            Color(uiColor: .systemBackground)
+                .ignoresSafeArea()
+
             // EPUB Navigator (full screen)
             EPUBNavigatorWrapper(
                 publication: publication,
@@ -80,13 +84,12 @@ struct ReaderView: View {
                     )
                     Spacer()
 
-                    // Bottom page indicator (Apple Books style)
                     if let progress = currentLocator?.locations.totalProgression {
                         Text("\(Int(progress * 100))%")
-                            .font(.caption)
+                            .font(.caption.weight(.medium))
                             .foregroundStyle(DesignSystem.Colors.foregroundSubtle)
                             .frame(maxWidth: .infinity)
-                            .padding(.bottom, DesignSystem.Spacing.sm)
+                            .padding(.bottom, DesignSystem.Spacing.lg)
                     }
                 }
                 .transition(.opacity)
@@ -181,23 +184,17 @@ struct ReaderView: View {
             Spacer()
             HStack {
                 Spacer()
-                Button(action: openReaderChat) {
-                    Image(systemName: "message")
-                        .font(.title3.weight(.medium))
-                        .foregroundStyle(DesignSystem.Colors.foreground)
-                        .frame(width: 52, height: 52)
-                        .background(DesignSystem.Colors.surface)
-                        .clipShape(RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.medium))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.medium)
-                                .stroke(DesignSystem.Colors.border, lineWidth: 1)
-                        )
-                        .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 4)
-                }
-                .accessibilityLabel(conversation == nil ? "Open chat" : "Reopen chat")
+                LiquidGlassIconButton(
+                    systemName: "message.fill",
+                    accessibilityLabel: conversation == nil ? "Open chat" : "Reopen chat",
+                    size: 44,
+                    font: .title3.weight(.semibold),
+                    foreground: DesignSystem.Colors.accent,
+                    action: openReaderChat
+                )
             }
             .padding(.trailing, DesignSystem.Spacing.lg)
-            .padding(.bottom, 92)
+            .padding(.bottom, DesignSystem.Spacing.xxl)
         }
     }
 
