@@ -2,7 +2,9 @@ import Foundation
 
 /// Holds the full state of a chat conversation — mirrors ChatContext.tsx
 @Observable
-class ConversationContext {
+class ConversationContext: Identifiable {
+    let id = UUID()
+
     enum Source: String, Codable {
         case selection
         case reader

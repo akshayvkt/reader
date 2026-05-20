@@ -12,105 +12,151 @@ struct ChatPanelView: View {
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Scope selector
-                ScopeSelectorView(
-                    selectedScope: $conversation.scope,
-                    hasHighlightContext: hasHighlight,
-                    hasChapterContext: conversation.chapterText != nil,
-                    hasBookContext: conversation.bookText != nil
-                )
-                .padding(.horizontal, DesignSystem.Spacing.lg)
-                .padding(.vertical, DesignSystem.Spacing.md)
+        VStack(spacing: 0) {
+            header
 
-                Divider()
+            Divider()
 
-                // Messages
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: DesignSystem.Spacing.lg) {
-                            if hasHighlight, let originalText = conversation.originalText {
-                                HStack(alignment: .top) {
-                                    Rectangle()
-                                        .fill(DesignSystem.Colors.accent)
-                                        .frame(width: 2)
-                                    Text(originalText)
-                                        .font(.subheadline)
-                                        .italic()
-                                        .foregroundStyle(DesignSystem.Colors.foregroundMuted)
-                                }
-                                .padding(.bottom, DesignSystem.Spacing.sm)
-                            }
+            ScopeSelectorView(
+                selectedScope: $conversation.scope,
+                hasHighlightContext: hasHighlight,
+                hasChapterContext: conversation.chapterText != nil,
+                hasBookContext: conversation.bookText != nil
+            )
+            .padding(.horizontal, DesignSystem.Spacing.lg)
+            .padding(.vertical, DesignSystem.Spacing.md)
 
-                            // Message list
-                            ForEach(conversation.messages) { message in
-                                MessageBubbleView(message: message)
-                                    .id(message.id)
-                            }
+            Divider()
 
-                            // Thinking indicator
-                            if isSending {
-                                HStack(spacing: 4) {
-                                    ProgressView()
-                                        .scaleEffect(0.7)
-                                    Text("Thinking...")
-                                        .font(.caption)
-                                        .foregroundStyle(DesignSystem.Colors.foregroundMuted)
-                                }
-                                .id("thinking")
-                            }
-                        }
-                        .padding(DesignSystem.Spacing.lg)
-                    }
-                    .onChange(of: conversation.messages.count) { _, _ in
-                        if let lastId = conversation.messages.last?.id {
-                            withAnimation {
-                                proxy.scrollTo(lastId, anchor: .bottom)
-                            }
-                        }
-                    }
-                }
+            messagesView
 
-                Divider()
+            Divider()
 
-                // Input bar
-                HStack(spacing: DesignSystem.Spacing.sm) {
-                    TextField(inputPlaceholder, text: $input, axis: .vertical)
-                        .font(.subheadline)
-                        .textFieldStyle(.plain)
-                        .lineLimit(1...4)
-                        .focused($isInputFocused)
-                        .disabled(isSending || !activeScopeIsReady)
-                        .onSubmit { sendMessage() }
-
-                    Button(action: sendMessage) {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                            ? DesignSystem.Colors.foregroundSubtle
-                                            : DesignSystem.Colors.accent)
-                    }
-                    .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSending || !activeScopeIsReady)
-                }
-                .padding(DesignSystem.Spacing.md)
-                .background(DesignSystem.Colors.surface)
-            }
-            .background(DesignSystem.Colors.background)
-            .navigationTitle("Chat")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { onClose() }
-                        .foregroundStyle(DesignSystem.Colors.accent)
-                }
-            }
+            inputBar
         }
+        .background(DesignSystem.Colors.background)
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 isInputFocused = true
             }
         }
+    }
+
+    private var header: some View {
+        HStack(spacing: DesignSystem.Spacing.md) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Chat")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(DesignSystem.Colors.foreground)
+
+                Text(scopeStatusText)
+                    .font(.caption)
+                    .foregroundStyle(DesignSystem.Colors.foregroundMuted)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Button(action: onClose) {
+                Image(systemName: "xmark")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(DesignSystem.Colors.foreground)
+                    .frame(width: 34, height: 34)
+                    .background(DesignSystem.Colors.backgroundMuted, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Close chat")
+        }
+        .padding(.horizontal, DesignSystem.Spacing.lg)
+        .padding(.top, DesignSystem.Spacing.lg)
+        .padding(.bottom, DesignSystem.Spacing.md)
+        .background(DesignSystem.Colors.surface)
+    }
+
+    private var messagesView: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.lg) {
+                    if hasHighlight, let originalText = conversation.originalText {
+                        HStack(alignment: .top) {
+                            Rectangle()
+                                .fill(DesignSystem.Colors.accent)
+                                .frame(width: 2)
+                            Text(originalText)
+                                .font(.subheadline)
+                                .italic()
+                                .foregroundStyle(DesignSystem.Colors.foregroundMuted)
+                        }
+                        .padding(.bottom, DesignSystem.Spacing.sm)
+                    }
+
+                    if conversation.messages.isEmpty {
+                        emptyState
+                    }
+
+                    ForEach(conversation.messages) { message in
+                        MessageBubbleView(message: message)
+                            .id(message.id)
+                    }
+
+                    if isSending {
+                        HStack(spacing: DesignSystem.Spacing.xs) {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                            Text("Thinking...")
+                                .font(.caption)
+                                .foregroundStyle(DesignSystem.Colors.foregroundMuted)
+                        }
+                        .id("thinking")
+                    }
+                }
+                .padding(DesignSystem.Spacing.lg)
+            }
+            .onChange(of: conversation.messages.count) { _, _ in
+                if let lastId = conversation.messages.last?.id {
+                    withAnimation {
+                        proxy.scrollTo(lastId, anchor: .bottom)
+                    }
+                }
+            }
+        }
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: DesignSystem.Spacing.sm) {
+            Image(systemName: activeScopeIsReady ? "message" : "hourglass")
+                .font(.title2)
+                .foregroundStyle(DesignSystem.Colors.foregroundSubtle)
+
+            Text(activeScopeIsReady ? "Ask about this \(scopeLabel)." : scopeStatusText)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(DesignSystem.Colors.foregroundMuted)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, minHeight: 160)
+    }
+
+    private var inputBar: some View {
+        HStack(spacing: DesignSystem.Spacing.sm) {
+            TextField(inputPlaceholder, text: $input, axis: .vertical)
+                .font(.subheadline)
+                .textFieldStyle(.plain)
+                .lineLimit(1...4)
+                .focused($isInputFocused)
+                .disabled(isSending || !activeScopeIsReady)
+                .onSubmit { sendMessage() }
+
+            Button(action: sendMessage) {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                     ? DesignSystem.Colors.foregroundSubtle
+                                     : DesignSystem.Colors.accent)
+            }
+            .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSending || !activeScopeIsReady)
+        }
+        .padding(DesignSystem.Spacing.md)
+        .background(DesignSystem.Colors.surface)
     }
 
     // MARK: - Send Message
@@ -139,6 +185,25 @@ struct ChatPanelView: View {
             }
         }
         return hasHighlight ? "Ask about this text..." : "Ask a question..."
+    }
+
+    private var scopeLabel: String {
+        switch conversation.scope {
+        case .highlight: return "highlight"
+        case .chapter: return "chapter"
+        case .book: return "book"
+        }
+    }
+
+    private var scopeStatusText: String {
+        switch conversation.scope {
+        case .highlight:
+            return hasHighlight ? "Highlight" : "Loading highlight..."
+        case .chapter:
+            return conversation.chapterText == nil ? "Loading chapter..." : conversation.chapterTitle ?? "Current chapter"
+        case .book:
+            return conversation.bookText == nil ? "Loading book..." : "Whole book"
+        }
     }
 
     private func sendMessage() {

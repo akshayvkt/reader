@@ -24,10 +24,10 @@ struct ReaderView: View {
     @State private var showTableOfContents = false
     @State private var showSearch = false
     @State private var showSettings = false
-    @State private var showChat = false
 
     // Chat state
     @State private var conversation: ConversationContext?
+    @State private var presentedConversation: ConversationContext?
 
     // Current reading position
     @State private var currentLocator: Locator?
@@ -131,7 +131,7 @@ struct ReaderView: View {
                         conversation = nextConversation
                         showSelectionPopup = false
                         selectedText = nil
-                        showChat = true
+                        presentedConversation = nextConversation
                         loadReaderContexts(for: nextConversation)
                     }
                 )
@@ -166,15 +166,14 @@ struct ReaderView: View {
                 .presentationDetents([.medium])
         }
         // Chat panel
-        .sheet(isPresented: $showChat) {
-            if let conversation = conversation {
-                ChatPanelView(
-                    conversation: conversation,
-                    apiClient: appState.apiClient,
-                    onClose: { showChat = false }
-                )
-                .presentationDetents([.large])
-            }
+        .sheet(item: $presentedConversation) { conversation in
+            ChatPanelView(
+                conversation: conversation,
+                apiClient: appState.apiClient,
+                onClose: { presentedConversation = nil }
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .preferredColorScheme(preferences.colorSchemeOverride)
     }
@@ -202,7 +201,7 @@ struct ReaderView: View {
 
     private func openReaderChat() {
         if let conversation {
-            showChat = true
+            presentedConversation = conversation
             if conversation.chapterText == nil || conversation.bookText == nil {
                 loadReaderContexts(for: conversation)
             }
@@ -217,7 +216,7 @@ struct ReaderView: View {
             chapterTitle: currentChapterTitle ?? "Current Chapter"
         )
         conversation = nextConversation
-        showChat = true
+        presentedConversation = nextConversation
         loadReaderContexts(for: nextConversation)
     }
 
