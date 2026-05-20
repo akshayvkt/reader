@@ -99,6 +99,7 @@ struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
         var prefs = EPUBPreferences()
         prefs.fontSize = preferences.fontSize.readiumMultiplier
         prefs.lineHeight = preferences.lineSpacing
+        prefs.pageMargins = 1.12
 
         // Map our font family to Readium's font family
         if preferences.fontFamily != .system {

@@ -31,6 +31,7 @@ struct ReaderView: View {
     // Current reading position
     @State private var currentLocator: Locator?
     @State private var currentChapterTitle: String?
+    @State private var totalPositionCount: Int?
     @State private var navigationRequest: EPUBNavigationRequest?
 
     private let maxBookContextCharacters = 120_000
@@ -88,8 +89,8 @@ struct ReaderView: View {
 
                     Spacer()
 
-                    if let progress = currentLocator?.locations.totalProgression {
-                        Text("\(Int(progress * 100))%")
+                    if let pageProgressText {
+                        Text(pageProgressText)
                             .font(.caption.weight(.medium))
                             .foregroundStyle(DesignSystem.Colors.foregroundSubtle)
                             .frame(maxWidth: .infinity)
@@ -103,6 +104,7 @@ struct ReaderView: View {
             if let currentLocator {
                 updateChapterTitle(from: currentLocator)
             }
+            await loadPositionCount()
         }
         // Selection popup
         .overlay {
@@ -177,6 +179,25 @@ struct ReaderView: View {
     }
 
     // MARK: - Chat
+
+    private var pageProgressText: String? {
+        guard let totalPositionCount, totalPositionCount > 0 else { return nil }
+
+        let position = currentLocator?.locations.position
+            ?? currentLocator?.locations.totalProgression.map {
+                max(1, min(totalPositionCount, Int(ceil($0 * Double(totalPositionCount)))))
+            }
+            ?? 1
+
+        return "\(max(1, min(position, totalPositionCount))) of \(totalPositionCount)"
+    }
+
+    private func loadPositionCount() async {
+        let count = await publication.positions().getOrNil()?.count
+        await MainActor.run {
+            totalPositionCount = count.flatMap { $0 > 0 ? $0 : nil }
+        }
+    }
 
     private func openReaderChat() {
         if let conversation {

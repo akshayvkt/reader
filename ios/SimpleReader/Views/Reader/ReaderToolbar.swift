@@ -57,7 +57,7 @@ enum ReaderChromeLayout {
     static let toolbarTextGap: CGFloat = 14
     static let toolbarYOffset: CGFloat = -6
 
-    static let bottomControlGap: CGFloat = 6
+    static let bottomControlGap: CGFloat = 2
     static let progressHeight: CGFloat = 18
 
     static var toolbarHeight: CGFloat {
