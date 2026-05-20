@@ -2,6 +2,16 @@ import SwiftUI
 import ReadiumShared
 import ReadiumNavigator
 
+struct EPUBNavigationRequest: Equatable {
+    enum Target: Equatable {
+        case link(ReadiumShared.Link)
+        case locator(Locator)
+    }
+
+    let id = UUID()
+    let target: Target
+}
+
 /// Wraps Readium's EPUBNavigatorViewController in SwiftUI.
 /// Handles navigator creation, preference updates, and delegate callbacks.
 struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
@@ -9,6 +19,7 @@ struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
     let initialLocator: Locator?
     let preferences: ReadingPreferences
     let httpServer: HTTPServer
+    let navigationRequest: EPUBNavigationRequest?
 
     /// Called when user selects text and taps Explain/ELI5
     var onSelectionAction: (String, SimplifyMode) -> Void
@@ -56,6 +67,21 @@ struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
         // Apply updated preferences when they change
         let epubPrefs = buildEPUBPreferences()
         controller.navigator.submitPreferences(epubPrefs)
+
+        guard let request = navigationRequest,
+              context.coordinator.lastNavigationRequestID != request.id else {
+            return
+        }
+
+        context.coordinator.lastNavigationRequestID = request.id
+        Task { @MainActor in
+            switch request.target {
+            case .link(let link):
+                _ = await controller.navigator.go(to: link)
+            case .locator(let locator):
+                _ = await controller.navigator.go(to: locator)
+            }
+        }
     }
 
     func makeCoordinator() -> Coordinator {
@@ -92,6 +118,7 @@ struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
     class Coordinator: NSObject, EPUBNavigatorDelegate {
         let parent: EPUBNavigatorWrapper
         weak var navigator: EPUBNavigatorViewController?
+        var lastNavigationRequestID: UUID?
 
         init(parent: EPUBNavigatorWrapper) {
             self.parent = parent

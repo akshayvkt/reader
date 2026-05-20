@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 import ReadiumShared
 import ReadiumNavigator
@@ -29,11 +30,15 @@ struct ReaderView: View {
     // Current reading position
     @State private var currentLocator: Locator?
     @State private var currentChapterTitle: String?
+    @State private var navigationRequest: EPUBNavigationRequest?
+
+    private let maxBookContextCharacters = 120_000
 
     init(book: RecentBook, publication: Publication) {
         self.book = book
         self.publication = publication
         self._preferences = State(initialValue: ReadingPreferences())
+        self._currentLocator = State(initialValue: book.locatorJSON.flatMap { try? Locator(jsonString: $0) })
     }
 
     var body: some View {
@@ -44,6 +49,7 @@ struct ReaderView: View {
                 initialLocator: restoreLocator(),
                 preferences: preferences,
                 httpServer: appState.readiumService.httpServer,
+                navigationRequest: navigationRequest,
                 onSelectionAction: { text, mode in
                     selectedText = text
                     selectionMode = mode
@@ -85,8 +91,17 @@ struct ReaderView: View {
                 }
                 .transition(.opacity)
             }
+
+            if !showChat && !showSelectionPopup {
+                floatingChatButton
+            }
         }
         .statusBarHidden(!showToolbar)
+        .task(id: book.id) {
+            if let currentLocator {
+                updateChapterTitle(from: currentLocator)
+            }
+        }
         // Selection popup
         .overlay {
             if showSelectionPopup, let text = selectedText {
@@ -99,16 +114,20 @@ struct ReaderView: View {
                         selectedText = nil
                     },
                     onExpand: { originalText, messages in
-                        conversation = ConversationContext(
+                        let nextConversation = ConversationContext(
+                            source: .selection,
                             originalText: originalText,
                             messages: messages,
+                            scope: .highlight,
                             chapterText: nil, // Will be extracted when chat opens
                             bookText: nil,
                             chapterTitle: currentChapterTitle
                         )
+                        conversation = nextConversation
                         showSelectionPopup = false
                         selectedText = nil
                         showChat = true
+                        loadReaderContexts(for: nextConversation)
                     }
                 )
             }
@@ -118,8 +137,8 @@ struct ReaderView: View {
             TableOfContentsView(
                 toc: publication.manifest.tableOfContents,
                 currentHref: currentLocator?.href.string,
-                onNavigate: { _ in
-                    // Navigation handled via coordinator
+                onNavigate: { link in
+                    navigate(to: link)
                     showTableOfContents = false
                 }
             )
@@ -127,7 +146,13 @@ struct ReaderView: View {
         }
         // Search
         .sheet(isPresented: $showSearch) {
-            SearchPanelView(publication: publication)
+            SearchPanelView(
+                publication: publication,
+                onNavigate: { locator in
+                    navigate(to: locator)
+                    showSearch = false
+                }
+            )
                 .presentationDetents([.large])
         }
         // Settings
@@ -147,6 +172,189 @@ struct ReaderView: View {
             }
         }
         .preferredColorScheme(preferences.colorSchemeOverride)
+    }
+
+    // MARK: - Chat
+
+    private var floatingChatButton: some View {
+        VStack {
+            Spacer()
+            HStack {
+                Spacer()
+                Button(action: openReaderChat) {
+                    Image(systemName: "message")
+                        .font(.title3.weight(.medium))
+                        .foregroundStyle(DesignSystem.Colors.foreground)
+                        .frame(width: 52, height: 52)
+                        .background(DesignSystem.Colors.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.medium))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.medium)
+                                .stroke(DesignSystem.Colors.border, lineWidth: 1)
+                        )
+                        .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 4)
+                }
+                .accessibilityLabel(conversation == nil ? "Open chat" : "Reopen chat")
+            }
+            .padding(.trailing, DesignSystem.Spacing.lg)
+            .padding(.bottom, 92)
+        }
+    }
+
+    private func openReaderChat() {
+        if let conversation {
+            showChat = true
+            if conversation.chapterText == nil || conversation.bookText == nil {
+                loadReaderContexts(for: conversation)
+            }
+            return
+        }
+
+        let nextConversation = ConversationContext(
+            source: .reader,
+            originalText: nil,
+            messages: [],
+            scope: .chapter,
+            chapterTitle: currentChapterTitle ?? "Current Chapter"
+        )
+        conversation = nextConversation
+        showChat = true
+        loadReaderContexts(for: nextConversation)
+    }
+
+    private func loadReaderContexts(for targetConversation: ConversationContext) {
+        Task {
+            let chapterData = await extractCurrentChapter()
+            await MainActor.run {
+                guard let currentConversation = conversation, currentConversation === targetConversation else { return }
+                if let chapterData {
+                    currentConversation.chapterText = chapterData.text
+                    currentConversation.chapterTitle = chapterData.title
+                    if currentConversation.source == .reader {
+                        currentConversation.scope = .chapter
+                    }
+                }
+            }
+
+            let bookText = await extractBookText()
+            await MainActor.run {
+                guard let currentConversation = conversation, currentConversation === targetConversation else { return }
+                if let bookText, !bookText.isEmpty {
+                    currentConversation.bookText = bookText
+                }
+            }
+        }
+    }
+
+    private func extractCurrentChapter() async -> (text: String, title: String)? {
+        guard let link = currentReadingOrderLink(),
+              let text = await extractPlainText(from: link),
+              !text.isEmpty else {
+            return nil
+        }
+
+        let title = currentChapterTitle
+            ?? link.title
+            ?? findTocTitle(in: publication.manifest.tableOfContents, matching: normalizedHref(link.href))
+            ?? "Current Chapter"
+
+        return (text, title)
+    }
+
+    private func extractBookText() async -> String? {
+        var sections: [String] = []
+        var totalCharacters = 0
+
+        for link in publication.readingOrder {
+            guard let text = await extractPlainText(from: link), !text.isEmpty else {
+                continue
+            }
+
+            let remainingCharacters = maxBookContextCharacters - totalCharacters
+            guard remainingCharacters > 0 else { break }
+
+            let cappedText = text.count > remainingCharacters
+                ? String(text.prefix(remainingCharacters))
+                : text
+
+            sections.append(cappedText)
+            totalCharacters += cappedText.count
+
+            if totalCharacters >= maxBookContextCharacters {
+                break
+            }
+        }
+
+        return sections.isEmpty ? nil : sections.joined(separator: "\n\n---\n\n")
+    }
+
+    private func extractPlainText(from link: ReadiumShared.Link) async -> String? {
+        guard let resource = publication.get(link) else { return nil }
+
+        do {
+            let html = try await resource.readAsString().get()
+            return plainText(fromHTML: html)
+        } catch {
+            return nil
+        }
+    }
+
+    private func currentReadingOrderLink() -> ReadiumShared.Link? {
+        guard let locator = currentLocator else {
+            return publication.readingOrder.first
+        }
+
+        let currentHref = normalizedHref(locator.href.string)
+        return publication.readingOrder.first { link in
+            let linkHref = normalizedHref(link.href)
+            return currentHref == linkHref
+                || currentHref.hasSuffix("/\(linkHref)")
+                || linkHref.hasSuffix("/\(currentHref)")
+        } ?? publication.readingOrder.first
+    }
+
+    private func normalizedHref(_ href: String) -> String {
+        let withoutFragment = href.split(separator: "#", maxSplits: 1).first.map(String.init) ?? href
+        let withoutQuery = withoutFragment.split(separator: "?", maxSplits: 1).first.map(String.init) ?? withoutFragment
+        return withoutQuery.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    }
+
+    private func plainText(fromHTML html: String) -> String {
+        var text = html
+            .replacingOccurrences(of: "(?is)<script[^>]*>.*?</script>", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "(?is)<style[^>]*>.*?</style>", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "(?i)<br\\s*/?>", with: "\n", options: .regularExpression)
+            .replacingOccurrences(of: "(?i)</p\\s*>", with: "\n\n", options: .regularExpression)
+            .replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
+
+        let entities = [
+            "&nbsp;": " ",
+            "&amp;": "&",
+            "&quot;": "\"",
+            "&#34;": "\"",
+            "&#39;": "'",
+            "&apos;": "'",
+            "&lt;": "<",
+            "&gt;": ">",
+        ]
+
+        for (entity, replacement) in entities {
+            text = text.replacingOccurrences(of: entity, with: replacement)
+        }
+
+        return text
+            .replacingOccurrences(of: "[ \\t]+", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "\\n[ \\t]+", with: "\n", options: .regularExpression)
+            .replacingOccurrences(of: "\\n{3,}", with: "\n\n", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func navigate(to link: ReadiumShared.Link) {
+        navigationRequest = EPUBNavigationRequest(target: .link(link))
+    }
+
+    private func navigate(to locator: Locator) {
+        navigationRequest = EPUBNavigationRequest(target: .locator(locator))
     }
 
     // MARK: - Position Save/Restore
@@ -171,14 +379,17 @@ struct ReaderView: View {
     private func updateChapterTitle(from locator: Locator) {
         // Find the matching TOC entry
         let href = locator.href.string.split(separator: "#").first.map(String.init) ?? locator.href.string
-        currentChapterTitle = findTocTitle(in: publication.manifest.tableOfContents, matching: href)
+        currentChapterTitle = findTocTitle(in: publication.manifest.tableOfContents, matching: normalizedHref(href))
     }
 
     private func findTocTitle(in links: [ReadiumShared.Link], matching href: String) -> String? {
         for link in links {
             // Link.href is String in Readium 3.7 (not a URL type)
             let linkHref = link.href.split(separator: "#").first.map(String.init) ?? link.href
-            if linkHref == href {
+            let normalizedLinkHref = normalizedHref(linkHref)
+            if normalizedLinkHref == href
+                || normalizedLinkHref.hasSuffix("/\(href)")
+                || href.hasSuffix("/\(normalizedLinkHref)") {
                 return link.title
             }
             if let childTitle = findTocTitle(in: link.children, matching: href) {

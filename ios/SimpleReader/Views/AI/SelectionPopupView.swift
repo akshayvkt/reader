@@ -209,6 +209,7 @@ struct SelectionPopupView: View {
         let question = followUpInput.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty, !isSendingFollowUp else { return }
 
+        let conversationHistory = messages
         messages.append(ChatMessage(role: .user, content: question))
         followUpInput = ""
         isSendingFollowUp = true
@@ -218,7 +219,7 @@ struct SelectionPopupView: View {
                 let result = try await apiClient.followUp(
                     text: question,
                     originalText: text,
-                    conversationHistory: messages
+                    conversationHistory: conversationHistory
                 )
                 messages.append(ChatMessage(role: .assistant, content: result))
             } catch {

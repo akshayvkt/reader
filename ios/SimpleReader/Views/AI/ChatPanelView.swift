@@ -17,6 +17,7 @@ struct ChatPanelView: View {
                 // Scope selector
                 ScopeSelectorView(
                     selectedScope: $conversation.scope,
+                    hasHighlightContext: hasHighlight,
                     hasChapterContext: conversation.chapterText != nil,
                     hasBookContext: conversation.bookText != nil
                 )
@@ -29,17 +30,18 @@ struct ChatPanelView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         VStack(alignment: .leading, spacing: DesignSystem.Spacing.lg) {
-                            // Original highlighted text
-                            HStack(alignment: .top) {
-                                Rectangle()
-                                    .fill(DesignSystem.Colors.accent)
-                                    .frame(width: 2)
-                                Text(conversation.originalText)
-                                    .font(.subheadline)
-                                    .italic()
-                                    .foregroundStyle(DesignSystem.Colors.foregroundMuted)
+                            if hasHighlight, let originalText = conversation.originalText {
+                                HStack(alignment: .top) {
+                                    Rectangle()
+                                        .fill(DesignSystem.Colors.accent)
+                                        .frame(width: 2)
+                                    Text(originalText)
+                                        .font(.subheadline)
+                                        .italic()
+                                        .foregroundStyle(DesignSystem.Colors.foregroundMuted)
+                                }
+                                .padding(.bottom, DesignSystem.Spacing.sm)
                             }
-                            .padding(.bottom, DesignSystem.Spacing.sm)
 
                             // Message list
                             ForEach(conversation.messages) { message in
@@ -74,12 +76,12 @@ struct ChatPanelView: View {
 
                 // Input bar
                 HStack(spacing: DesignSystem.Spacing.sm) {
-                    TextField("Ask about this text...", text: $input, axis: .vertical)
+                    TextField(inputPlaceholder, text: $input, axis: .vertical)
                         .font(.subheadline)
                         .textFieldStyle(.plain)
                         .lineLimit(1...4)
                         .focused($isInputFocused)
-                        .disabled(isSending)
+                        .disabled(isSending || !activeScopeIsReady)
                         .onSubmit { sendMessage() }
 
                     Button(action: sendMessage) {
@@ -89,7 +91,7 @@ struct ChatPanelView: View {
                                             ? DesignSystem.Colors.foregroundSubtle
                                             : DesignSystem.Colors.accent)
                     }
-                    .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSending)
+                    .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSending || !activeScopeIsReady)
                 }
                 .padding(DesignSystem.Spacing.md)
                 .background(DesignSystem.Colors.surface)
@@ -113,10 +115,37 @@ struct ChatPanelView: View {
 
     // MARK: - Send Message
 
+    private var hasHighlight: Bool {
+        !(conversation.originalText ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var activeScopeIsReady: Bool {
+        switch conversation.scope {
+        case .highlight:
+            return hasHighlight
+        case .chapter:
+            return conversation.chapterText != nil
+        case .book:
+            return conversation.bookText != nil
+        }
+    }
+
+    private var inputPlaceholder: String {
+        guard activeScopeIsReady else {
+            switch conversation.scope {
+            case .highlight: return "Loading highlight..."
+            case .chapter: return "Loading chapter..."
+            case .book: return "Loading book..."
+            }
+        }
+        return hasHighlight ? "Ask about this text..." : "Ask a question..."
+    }
+
     private func sendMessage() {
         let question = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !question.isEmpty, !isSending else { return }
+        guard !question.isEmpty, !isSending, activeScopeIsReady else { return }
 
+        let conversationHistory = conversation.messages
         conversation.addMessage(role: .user, content: question)
         input = ""
         isSending = true
@@ -135,7 +164,7 @@ struct ChatPanelView: View {
                 let result = try await apiClient.followUp(
                     text: question,
                     originalText: conversation.originalText,
-                    conversationHistory: conversation.messages,
+                    conversationHistory: conversationHistory,
                     scope: conversation.scope,
                     scopeContext: scopeContext,
                     chapterTitle: conversation.chapterTitle

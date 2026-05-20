@@ -4,17 +4,11 @@ import Foundation
 /// Ports the API calls from Simplifier.tsx and ChatPanel.tsx.
 ///
 /// All requests go to the existing Render backend.
-/// Auth token is included as a Bearer header on all /api/simplify calls.
 @Observable
 class APIClient {
     private let baseURL = URL(string: "https://reader-g6kh.onrender.com")!
-    private let authService: AuthService
 
     var isLoading = false
-
-    init(authService: AuthService) {
-        self.authService = authService
-    }
 
     // MARK: - Simplify (Explain / ELI5)
 
@@ -34,7 +28,7 @@ class APIClient {
     /// POST /api/simplify with full conversation context
     func followUp(
         text: String,
-        originalText: String,
+        originalText: String?,
         conversationHistory: [ChatMessage],
         scope: ContextScope? = nil,
         scopeContext: String? = nil,
@@ -43,12 +37,14 @@ class APIClient {
         var body: [String: Any] = [
             "text": text,
             "mode": SimplifyMode.followup.rawValue,
-            "originalText": originalText,
             "conversationHistory": conversationHistory.map { msg in
                 ["role": msg.role.rawValue, "content": msg.content]
             },
         ]
 
+        if let originalText, !originalText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            body["originalText"] = originalText
+        }
         if let scope = scope {
             body["scope"] = scope.rawValue
         }
@@ -109,11 +105,6 @@ class APIClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        // Add auth token if available
-        if let token = authService.token {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
 
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 

@@ -61,6 +61,14 @@ struct LibraryView: View {
             } message: {
                 Text(importError ?? "")
             }
+            .alert("Open Book Error", isPresented: .init(
+                get: { appState.readerError != nil },
+                set: { if !$0 { appState.readerError = nil } }
+            )) {
+                Button("OK") { appState.readerError = nil }
+            } message: {
+                Text(appState.readerError ?? "")
+            }
         }
     }
 

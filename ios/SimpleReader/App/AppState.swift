@@ -8,39 +8,26 @@ class AppState {
 
     // MARK: - Services
 
-    let authService: AuthService
     let readiumService = ReadiumService()
     let library = BookLibrary()
     let preferences = ReadingPreferences()
-    let apiClient: APIClient
-
-    init() {
-        let auth = AuthService()
-        self.authService = auth
-        self.apiClient = APIClient(authService: auth)
-    }
+    let apiClient = APIClient()
 
     // MARK: - Navigation
 
     enum Screen {
         case loading
-        case login
         case library
         case reader(book: RecentBook, publication: Publication)
     }
 
     var currentScreen: Screen = .loading
+    var readerError: String?
 
     // MARK: - Lifecycle
 
-    /// Called on app launch — check auth and show appropriate screen
+    /// Called on app launch — show the local library.
     func onLaunch() {
-        // Skip auth for now — go straight to library
-        currentScreen = .library
-    }
-
-    /// Skip auth and go to library (temporary, until Google Sign-In is wired up)
-    func skipAuth() {
         currentScreen = .library
     }
 
@@ -50,7 +37,7 @@ class AppState {
     func openBook(_ book: RecentBook) {
         // Resolve the security-scoped bookmark
         guard let url = BookImporter.resolveBookmark(book.bookmarkData) else {
-            // TODO: Show error — bookmark is stale
+            readerError = "File not found: \"\(book.title)\" may have been moved or deleted. Please add it again."
             return
         }
 
@@ -65,8 +52,7 @@ class AppState {
 
                 currentScreen = .reader(book: book, publication: publication)
             } catch {
-                // TODO: Show error
-                print("Failed to open book: \(error)")
+                readerError = "Could not open \"\(book.title)\". The file may have been moved or deleted."
                 if accessing {
                     url.stopAccessingSecurityScopedResource()
                 }

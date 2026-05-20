@@ -30,15 +30,22 @@ class ReaderHostingController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        // Black background fills the gaps around the navigator (status bar, home indicator area)
+        view.backgroundColor = .black
+
         addChild(navigator)
-        navigator.view.frame = view.bounds
-        navigator.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(navigator.view)
         navigator.didMove(toParent: self)
 
-        // Push EPUB content inward so text is never behind the floating toolbar/bottom bar.
-        // These values add padding beyond the system safe area (Dynamic Island, home indicator).
-        navigator.additionalSafeAreaInsets = UIEdgeInsets(top: 50, left: 0, bottom: 40, right: 0)
+        // Pin navigator within safe area + extra padding so EPUB text is never behind
+        // the floating toolbar (top) or page indicator (bottom).
+        navigator.view.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            navigator.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 44),
+            navigator.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            navigator.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            navigator.view.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -30),
+        ])
     }
 
     // MARK: - Custom Editing Actions

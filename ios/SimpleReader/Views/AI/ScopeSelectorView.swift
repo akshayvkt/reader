@@ -5,12 +5,13 @@ import SwiftUI
 /// Disabled pills when context is not available.
 struct ScopeSelectorView: View {
     @Binding var selectedScope: ContextScope
+    let hasHighlightContext: Bool
     let hasChapterContext: Bool
     let hasBookContext: Bool
 
     var body: some View {
         HStack(spacing: DesignSystem.Spacing.sm) {
-            scopeButton(.highlight, label: "Highlight", enabled: true)
+            scopeButton(.highlight, label: "Highlight", enabled: hasHighlightContext)
             scopeButton(.chapter, label: "Chapter", enabled: hasChapterContext)
             scopeButton(.book, label: "Whole Book", enabled: hasBookContext)
         }

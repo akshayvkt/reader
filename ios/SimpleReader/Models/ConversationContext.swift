@@ -3,7 +3,13 @@ import Foundation
 /// Holds the full state of a chat conversation — mirrors ChatContext.tsx
 @Observable
 class ConversationContext {
-    var originalText: String
+    enum Source: String, Codable {
+        case selection
+        case reader
+    }
+
+    var source: Source
+    var originalText: String?
     var chapterText: String?
     var bookText: String?
     var chapterTitle: String?
@@ -11,13 +17,15 @@ class ConversationContext {
     var scope: ContextScope
 
     init(
-        originalText: String,
+        source: Source = .selection,
+        originalText: String? = nil,
         messages: [ChatMessage] = [],
         scope: ContextScope = .highlight,
         chapterText: String? = nil,
         bookText: String? = nil,
         chapterTitle: String? = nil
     ) {
+        self.source = source
         self.originalText = originalText
         self.messages = messages
         self.scope = scope

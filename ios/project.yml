@@ -10,9 +10,6 @@ packages:
   ReadiumShared:
     url: https://github.com/readium/swift-toolkit.git
     from: 3.6.0
-  GoogleSignIn:
-    url: https://github.com/google/GoogleSignIn-iOS.git
-    from: 8.0.0
 
 targets:
   SimpleReader:
@@ -24,7 +21,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.dysun.simplereader
         MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: 1
+        CURRENT_PROJECT_VERSION: 2
         INFOPLIST_FILE: SimpleReader/Resources/Info.plist
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1,2"
@@ -39,5 +36,3 @@ targets:
         product: ReadiumNavigator
       - package: ReadiumShared
         product: ReadiumAdapterGCDWebServer
-      - package: GoogleSignIn
-        product: GoogleSignIn

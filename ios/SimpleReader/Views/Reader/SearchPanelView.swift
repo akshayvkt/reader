@@ -5,6 +5,7 @@ import ReadiumShared
 /// Ports BookReader.tsx search: debounced input, results with chapter + excerpt, navigation.
 struct SearchPanelView: View {
     let publication: Publication
+    let onNavigate: (Locator) -> Void
 
     @State private var query = ""
     @State private var results: [SearchResultItem] = []
@@ -64,7 +65,7 @@ struct SearchPanelView: View {
                         LazyVStack(alignment: .leading, spacing: 0) {
                             ForEach(results) { result in
                                 Button {
-                                    // TODO: Navigate to result via coordinator
+                                    onNavigate(result.locator)
                                     dismiss()
                                 } label: {
                                     VStack(alignment: .leading, spacing: 4) {
