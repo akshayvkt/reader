@@ -163,6 +163,11 @@ export default function ChatPanel() {
 
   if (!isExpanded || !conversation) return null;
 
+  const hasHighlight = Boolean(conversation.originalText?.trim());
+  const subtitle = hasHighlight
+    ? `${conversation.originalText?.slice(0, 50)}...`
+    : conversation.chapterTitle || 'Current chapter';
+
   return (
     <>
     <div
@@ -179,7 +184,7 @@ export default function ChatPanel() {
             Chat
           </h3>
           <p className="text-xs mt-0.5 truncate max-w-[200px]" style={{ color: 'var(--foreground-muted)' }}>
-            {conversation.originalText.slice(0, 50)}...
+            {subtitle}
           </p>
         </div>
         <button
@@ -205,7 +210,8 @@ export default function ChatPanel() {
         >
           {SCOPE_OPTIONS.map((option, index) => {
             const isSelected = conversation.scope === option.value;
-            const isDisabled = (option.value === 'chapter' && !conversation.chapterText) ||
+            const isDisabled = (option.value === 'highlight' && !hasHighlight) ||
+                               (option.value === 'chapter' && !conversation.chapterText) ||
                                (option.value === 'book' && !conversation.bookText);
             return (
               <button
@@ -243,16 +249,18 @@ export default function ChatPanel() {
       {/* Messages - dynamic bottom padding to allow scrolling user message to top */}
       <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ paddingBottom: dynamicPadding > 0 ? `${dynamicPadding}px` : undefined }}>
         {/* Selected text with terracotta accent */}
-        <div
-          className="text-sm italic"
-          style={{
-            borderLeft: '2px solid var(--accent)',
-            paddingLeft: '12px',
-            color: 'var(--foreground-muted)',
-          }}
-        >
-          &ldquo;{conversation.originalText}&rdquo;
-        </div>
+        {hasHighlight && (
+          <div
+            className="text-sm italic"
+            style={{
+              borderLeft: '2px solid var(--accent)',
+              paddingLeft: '12px',
+              color: 'var(--foreground-muted)',
+            }}
+          >
+            &ldquo;{conversation.originalText}&rdquo;
+          </div>
+        )}
 
         {conversation.messages.map((msg, index) => {
           // Attach ref to the last user message

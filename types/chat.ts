@@ -8,7 +8,8 @@ export interface ChatMessage {
 export type ContextScope = 'highlight' | 'chapter' | 'book';
 
 export interface ConversationContext {
-  originalText: string;
+  source?: 'selection' | 'reader';
+  originalText?: string;
   chapterText?: string;
   bookText?: string;
   chapterTitle?: string;

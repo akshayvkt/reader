@@ -160,15 +160,19 @@ ${scopeContext}
 `;
         }
 
-        return `You are a helpful reading companion continuing a conversation about a text passage. The reader previously asked about this text and now has a follow-up question.
+        const subjectLine = originalText
+          ? `Original text being discussed: "${originalText}"`
+          : 'The reader is asking about their current reading context.';
 
-Original text being discussed: "${originalText || text}"
+        return `You are a helpful reading companion continuing a conversation about a book.
+
+${subjectLine}
 ${contextSection}
 The reader's follow-up question: "${text}"
 
 Provide a helpful response that:
 - Directly addresses their question
-- References the original text when relevant${scope !== 'highlight' ? '\n- Draw on the broader context when it helps answer the question' : ''}
+- References the selected text when relevant${scope !== 'highlight' ? '\n- Draw on the broader context when it helps answer the question' : ''}
 - Keeps the explanation clear and concise
 - Maintains a friendly, conversational tone
 - Is brief (2-4 sentences max unless more detail is needed)
@@ -189,7 +193,9 @@ Response:`;
         contextInfo = `\n\nYou have access to the book's content for additional context:\n\n${scopeContext}`;
       }
 
-      const systemContext = `You are a helpful reading companion. The user is reading a book and previously selected this text: "${originalText}". Continue helping them understand it.${contextInfo}`;
+      const systemContext = originalText
+        ? `You are a helpful reading companion. The user is reading a book and previously selected this text: "${originalText}". Continue helping them understand it.${contextInfo}`
+        : `You are a helpful reading companion. The user is reading a book. Use the available reading context to answer their questions.${contextInfo}`;
 
       contents = [
         // System context as first user message

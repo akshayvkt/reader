@@ -59,7 +59,7 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
   const [showSimplifier, setShowSimplifier] = useState(false);
 
   // Chat integration
-  const { startConversation, setIsExpanded, isExpanded } = useChat();
+  const { startConversation, setIsExpanded, isExpanded, registerReaderContextProvider } = useChat();
   const [selectedFont, setSelectedFont] = useState(() => {
     return localStorage.getItem('reader-font-preference') || FONT_OPTIONS[0].value; // Charter
   });
@@ -875,6 +875,15 @@ export default function BookReader({ bookData, filePath, onClose }: BookReaderPr
       return null;
     }
   }, []);
+
+  useEffect(() => {
+    registerReaderContextProvider({
+      getChapterContext: extractChapterText,
+      getBookText: extractBookText,
+    });
+
+    return () => registerReaderContextProvider(null);
+  }, [registerReaderContextProvider, extractChapterText, extractBookText]);
 
   // Handle expanding to chat panel
   const handleExpandToChat = useCallback(async (originalText: string, messages: ChatMessage[]) => {

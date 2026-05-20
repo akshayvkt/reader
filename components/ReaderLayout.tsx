@@ -15,7 +15,7 @@ const MAX_CHAT_WIDTH = 45; // maximum 45%
 const DEFAULT_CHAT_WIDTH = 40; // default 40%
 
 export default function ReaderLayout({ children, onResize }: ReaderLayoutProps) {
-  const { isExpanded, conversation, setIsExpanded } = useChat();
+  const { isExpanded, conversation, openReaderChat } = useChat();
   const [chatWidth, setChatWidth] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('reader-chat-width');
@@ -101,10 +101,10 @@ export default function ReaderLayout({ children, onResize }: ReaderLayoutProps) 
       >
         {children}
 
-        {/* Minimized chat tab - shows when chat is closed but conversation exists */}
-        {!isExpanded && conversation && (
+        {/* Chat tab */}
+        {!isExpanded && (
           <button
-            onClick={() => setIsExpanded(true)}
+            onClick={openReaderChat}
             className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2 py-3 px-2 rounded-l-lg transition-all hover:px-3"
             style={{
               background: 'var(--surface)',
@@ -121,7 +121,7 @@ export default function ReaderLayout({ children, onResize }: ReaderLayoutProps) 
               e.currentTarget.style.color = 'var(--foreground-muted)';
               e.currentTarget.style.background = 'var(--surface)';
             }}
-            title="Reopen chat"
+            title={conversation ? 'Reopen chat' : 'Open chat'}
           >
             <MessageSquare className="w-4 h-4" />
           </button>
