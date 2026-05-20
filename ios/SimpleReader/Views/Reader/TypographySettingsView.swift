@@ -11,12 +11,13 @@ struct TypographySettingsView: View {
             List {
                 // Theme
                 Section("Theme") {
-                    Picker("Theme", selection: $preferences.theme) {
+                    HStack(spacing: 4) {
                         ForEach(ReadingPreferences.ThemeMode.allCases, id: \.self) { mode in
-                            Text(mode.rawValue).tag(mode)
+                            themeButton(for: mode)
                         }
                     }
-                    .pickerStyle(.segmented)
+                    .padding(3)
+                    .background(DesignSystem.Colors.backgroundMuted, in: Capsule())
                     .listRowBackground(DesignSystem.Colors.surface)
                 }
 
@@ -32,22 +33,52 @@ struct TypographySettingsView: View {
 
                 // Size
                 Section("Size") {
-                    HStack {
-                        // Decrease button
-                        Button {
-                            preferences.decrease()
-                        } label: {
-                            Text("A")
-                                .font(.body)
-                                .foregroundStyle(preferences.canDecrease
-                                    ? DesignSystem.Colors.foreground
-                                    : DesignSystem.Colors.foregroundSubtle)
+                    VStack(spacing: 12) {
+                        HStack {
+                            Button {
+                                preferences.decrease()
+                            } label: {
+                                Text("A")
+                                    .font(.body)
+                                    .foregroundStyle(preferences.canDecrease
+                                        ? DesignSystem.Colors.foreground
+                                        : DesignSystem.Colors.foregroundSubtle)
+                                    .frame(width: 44, height: 36)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(!preferences.canDecrease)
+
+                            Spacer()
+
+                            Text("\(Int(preferences.fontSize.readiumMultiplier * 100))%")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(DesignSystem.Colors.foreground)
+
+                            Spacer()
+
+                            Button {
+                                preferences.increase()
+                            } label: {
+                                Text("A")
+                                    .font(.title2)
+                                    .foregroundStyle(preferences.canIncrease
+                                        ? DesignSystem.Colors.foreground
+                                        : DesignSystem.Colors.foregroundSubtle)
+                                    .frame(width: 44, height: 36)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(!preferences.canIncrease)
                         }
-                        .disabled(!preferences.canDecrease)
 
-                        Spacer()
+                        Slider(
+                            value: fontSizeIndex,
+                            in: 0...Double(ReadingPreferences.FontSizeLevel.allCases.count - 1),
+                            step: 1
+                        )
+                        .tint(DesignSystem.Colors.accent)
 
-                        // Dot indicators
                         HStack(spacing: 6) {
                             ForEach(0..<ReadingPreferences.FontSizeLevel.allCases.count, id: \.self) { i in
                                 Circle()
@@ -57,20 +88,6 @@ struct TypographySettingsView: View {
                                     .frame(width: 6, height: 6)
                             }
                         }
-
-                        Spacer()
-
-                        // Increase button
-                        Button {
-                            preferences.increase()
-                        } label: {
-                            Text("A")
-                                .font(.title2)
-                                .foregroundStyle(preferences.canIncrease
-                                    ? DesignSystem.Colors.foreground
-                                    : DesignSystem.Colors.foregroundSubtle)
-                        }
-                        .disabled(!preferences.canIncrease)
                     }
                     .listRowBackground(DesignSystem.Colors.surface)
                 }
@@ -94,7 +111,7 @@ struct TypographySettingsView: View {
 
                         Slider(
                             value: $preferences.lineSpacing,
-                            in: 1.2...2.2,
+                            in: 1.0...2.0,
                             step: 0.1
                         )
                         .tint(DesignSystem.Colors.accent)
@@ -113,5 +130,40 @@ struct TypographySettingsView: View {
                 }
             }
         }
+    }
+
+    private var fontSizeIndex: Binding<Double> {
+        Binding {
+            Double(preferences.sizeIndex)
+        } set: { value in
+            let all = ReadingPreferences.FontSizeLevel.allCases
+            let index = max(0, min(all.count - 1, Int(value.rounded())))
+            preferences.fontSize = all[index]
+        }
+    }
+
+    private func themeButton(for mode: ReadingPreferences.ThemeMode) -> some View {
+        let isSelected = preferences.theme == mode
+
+        return Button {
+            preferences.theme = mode
+        } label: {
+            Text(mode.rawValue)
+                .font(.subheadline.weight(isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected
+                ? DesignSystem.Colors.accent
+                : DesignSystem.Colors.foreground)
+                .frame(maxWidth: .infinity, minHeight: 34)
+                .background {
+                    if isSelected {
+                        Capsule()
+                            .fill(DesignSystem.Colors.surface)
+                            .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 2)
+                    }
+                }
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityValue(isSelected ? "Selected" : "")
     }
 }

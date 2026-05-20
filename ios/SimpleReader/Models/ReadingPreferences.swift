@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import ReadiumNavigator
 
 /// Typography and theme settings — persisted in UserDefaults.
 /// Matches the 7 fonts, 6 sizes, and spacing range from BookReader.tsx.
@@ -28,7 +29,7 @@ class ReadingPreferences {
 
     init() {
         let defaults = UserDefaults.standard
-        self.fontFamily = FontFamily(rawValue: defaults.string(forKey: Self.fontKey) ?? "") ?? .charter
+        self.fontFamily = FontFamily(storedValue: defaults.string(forKey: Self.fontKey)) ?? .iowanOldStyle
         self.fontSize = FontSizeLevel(rawValue: defaults.integer(forKey: Self.sizeKey)) ?? .medium
         self.lineSpacing = defaults.object(forKey: Self.spacingKey) != nil
             ? defaults.double(forKey: Self.spacingKey)
@@ -68,26 +69,58 @@ class ReadingPreferences {
 
     // MARK: - Types
 
-    /// 7 font options matching BookReader.tsx lines 19-27
+    /// Font options backed by iOS/Readium-supported font families.
     enum FontFamily: String, CaseIterable, Codable {
-        case charter = "Charter"
-        case merriweather = "Merriweather"
+        case iowanOldStyle = "Iowan Old Style"
+        case athelas = "Athelas"
         case georgia = "Georgia"
-        case system = "System Default"
+        case system = "System"
         case arial = "Arial"
         case timesNewRoman = "Times New Roman"
         case openDyslexic = "OpenDyslexic"
 
+        init?(storedValue: String?) {
+            switch storedValue {
+            case "Charter":
+                self = .iowanOldStyle
+            case "Merriweather":
+                self = .athelas
+            case let value?:
+                self.init(rawValue: value)
+            case nil:
+                return nil
+            }
+        }
+
         /// The CSS/Readium font family name
         var readiumName: String {
             switch self {
-            case .charter: return "Charter"
-            case .merriweather: return "Merriweather"
+            case .iowanOldStyle: return "Iowan Old Style"
+            case .athelas: return "Athelas"
             case .georgia: return "Georgia"
             case .system: return "-apple-system"
             case .arial: return "Arial"
             case .timesNewRoman: return "Times New Roman"
             case .openDyslexic: return "OpenDyslexic"
+            }
+        }
+
+        var readiumFontFamily: ReadiumNavigator.FontFamily? {
+            switch self {
+            case .iowanOldStyle:
+                return .iowanOldStyle
+            case .athelas:
+                return .athelas
+            case .georgia:
+                return .georgia
+            case .system:
+                return nil
+            case .arial:
+                return .arial
+            case .timesNewRoman:
+                return ReadiumNavigator.FontFamily(rawValue: "Times New Roman")
+            case .openDyslexic:
+                return .openDyslexic
             }
         }
     }
@@ -114,9 +147,18 @@ class ReadingPreferences {
 
         var points: CGFloat { CGFloat(rawValue) }
 
-        /// Convert pixel size to Readium's font size multiplier.
-        /// Readium uses 1.0 = 100% (default ~16px base), so 18px → 1.125
-        var readiumMultiplier: Double { Double(rawValue) / 16.0 }
+        /// Convert size level to Readium's font size multiplier.
+        /// Use a wider scale than raw point values so each step is visible.
+        var readiumMultiplier: Double {
+            switch self {
+            case .small: return 0.90
+            case .medium: return 1.00
+            case .large: return 1.15
+            case .extraLarge: return 1.32
+            case .larger: return 1.52
+            case .largest: return 1.75
+            }
+        }
 
         static func < (lhs: FontSizeLevel, rhs: FontSizeLevel) -> Bool {
             lhs.rawValue < rhs.rawValue
@@ -127,5 +169,35 @@ class ReadingPreferences {
         case auto = "Auto"
         case light = "Light"
         case dark = "Dark"
+    }
+}
+
+struct ReaderDisplayPreferences: Equatable {
+    let fontFamily: ReadingPreferences.FontFamily
+    let fontSize: ReadingPreferences.FontSizeLevel
+    let lineSpacing: Double
+    let theme: ReadingPreferences.ThemeMode
+    let resolvedColorScheme: ColorScheme
+
+    init(_ preferences: ReadingPreferences, systemColorScheme: ColorScheme) {
+        fontFamily = preferences.fontFamily
+        fontSize = preferences.fontSize
+        lineSpacing = preferences.lineSpacing.clamped(to: 1.0 ... 2.0)
+        theme = preferences.theme
+
+        switch preferences.theme {
+        case .auto:
+            resolvedColorScheme = systemColorScheme
+        case .light:
+            resolvedColorScheme = .light
+        case .dark:
+            resolvedColorScheme = .dark
+        }
+    }
+}
+
+private extension Comparable {
+    func clamped(to limits: ClosedRange<Self>) -> Self {
+        min(max(self, limits.lowerBound), limits.upperBound)
     }
 }

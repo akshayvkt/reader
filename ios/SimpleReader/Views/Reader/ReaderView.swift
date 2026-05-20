@@ -8,6 +8,7 @@ import ReadiumNavigator
 /// Ports BookReader.tsx: reader + toolbar + simplifier + chapter nav + search + settings.
 struct ReaderView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var systemColorScheme
     let book: RecentBook
     let publication: Publication
 
@@ -52,7 +53,7 @@ struct ReaderView: View {
             EPUBNavigatorWrapper(
                 publication: publication,
                 initialLocator: restoreLocator(),
-                preferences: preferences,
+                preferences: ReaderDisplayPreferences(preferences, systemColorScheme: systemColorScheme),
                 chromeInsets: ReaderChromeLayout.contentInsets,
                 httpServer: appState.readiumService.httpServer,
                 navigationRequest: navigationRequest,

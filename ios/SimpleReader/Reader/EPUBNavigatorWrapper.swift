@@ -18,7 +18,7 @@ struct EPUBNavigationRequest: Equatable {
 struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
     let publication: Publication
     let initialLocator: Locator?
-    let preferences: ReadingPreferences
+    let preferences: ReaderDisplayPreferences
     let chromeInsets: ReaderChromeInsets
     let httpServer: HTTPServer
     let navigationRequest: EPUBNavigationRequest?
@@ -100,20 +100,21 @@ struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
         prefs.fontSize = preferences.fontSize.readiumMultiplier
         prefs.lineHeight = preferences.lineSpacing
         prefs.pageMargins = 1.12
+        prefs.publisherStyles = false
 
         // Map our font family to Readium's font family
-        if preferences.fontFamily != .system {
-            prefs.fontFamily = ReadiumNavigator.FontFamily(rawValue: preferences.fontFamily.readiumName)
+        if let fontFamily = preferences.fontFamily.readiumFontFamily {
+            prefs.fontFamily = fontFamily
         }
 
         // Map theme
-        switch preferences.theme {
+        switch preferences.resolvedColorScheme {
         case .light:
             prefs.theme = .light
         case .dark:
             prefs.theme = .dark
-        case .auto:
-            break // Let Readium follow system
+        @unknown default:
+            prefs.theme = .light
         }
 
         return prefs
