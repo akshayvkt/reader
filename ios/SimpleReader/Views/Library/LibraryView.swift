@@ -33,11 +33,18 @@ struct LibraryView: View {
                     Button {
                         showFilePicker = true
                     } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2)
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(DesignSystem.Colors.accent)
+                        ZStack {
+                            Circle()
+                                .fill(DesignSystem.Colors.accent)
+
+                            Image(systemName: "plus")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                        .frame(width: 30, height: 30)
+                        .contentShape(Circle())
                     }
+                    .buttonStyle(.plain)
                     .accessibilityLabel("Add Book")
                 }
             }
