@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { BookOpen, Sparkles, Moon, FileText, ChevronDown, Download, Apple } from 'lucide-react';
 
 // Windows icon component since Lucide doesn't have one
@@ -35,7 +36,7 @@ export default function LandingPage() {
   const faqs = [
     {
       question: 'Is Simple Reader really free?',
-      answer: 'Yes, completely free. Just sign in with Google so we can provide you a personalized experience. No subscriptions, no hidden costs, no ads.',
+      answer: 'Yes, completely free. No account, no subscriptions, no hidden costs, no ads.',
     },
     {
       question: 'What file formats are supported?',
@@ -120,8 +121,8 @@ export default function LandingPage() {
             }}
           >
             {/* Primary: Start reading in browser */}
-            <a
-              href="/api/auth/login"
+            <Link
+              href="/"
               className="group flex items-center gap-3 px-8 py-4 rounded-xl text-lg font-medium transition-all duration-300 hover:scale-105"
               style={{
                 background: 'var(--foreground)',
@@ -129,7 +130,7 @@ export default function LandingPage() {
               }}
             >
               Start reading
-            </a>
+            </Link>
 
             {/* Secondary: Download app with dropdown */}
             <div className="relative">
@@ -435,13 +436,13 @@ export default function LandingPage() {
             className="text-lg mb-10"
             style={{ color: 'var(--foreground-muted)' }}
           >
-            Free to use. Sign in with Google and start reading.
+            Free to use. No sign-in needed.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             {/* Primary: Start reading in browser */}
-            <a
-              href="/api/auth/login"
+            <Link
+              href="/"
               className="group flex items-center gap-3 px-8 py-4 rounded-xl text-lg font-medium transition-all duration-300 hover:scale-105"
               style={{
                 background: 'var(--foreground)',
@@ -449,7 +450,7 @@ export default function LandingPage() {
               }}
             >
               Start reading
-            </a>
+            </Link>
 
             {/* Secondary: Download links */}
             <div className="flex gap-3">

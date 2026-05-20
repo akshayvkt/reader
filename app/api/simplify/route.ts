@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleAuth } from 'google-auth-library';
-import { verifyToken, extractTokenFromHeader } from '@/lib/auth';
 
 // CORS headers for Electron app (file:// origin)
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Headers': 'Content-Type',
 };
 
 // Handle CORS preflight
@@ -23,28 +22,6 @@ type ContextScope = 'highlight' | 'chapter' | 'book';
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify auth token
-    const authHeader = request.headers.get('Authorization');
-    const token = extractTokenFromHeader(authHeader);
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401, headers: corsHeaders }
-      );
-    }
-
-    const user = await verifyToken(token);
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Invalid or expired token' },
-        { status: 401, headers: corsHeaders }
-      );
-    }
-
-    // Log user for tracking (you can expand this to save to a database)
-    console.log('API request from user:', user.email);
-
     const { text, mode = 'explain', conversationHistory, originalText, scope, scopeContext, chapterTitle } = await request.json() as {
       text: string;
       mode?: 'explain' | 'eli5' | 'followup';

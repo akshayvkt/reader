@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Loader2, Lightbulb, Sparkles, ArrowUp, Maximize2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { ChatMessage } from '../types/chat';
-import { getApiUrl, getAuthHeaders } from '../lib/api';
+import { getApiHeaders, getApiUrl } from '../lib/api';
 
 interface SimplifierProps {
   text: string;
@@ -129,10 +129,9 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
 
     // Use AI for phrases or if dictionary fails
     try {
-      const headers = await getAuthHeaders();
       const response = await fetch(getApiUrl('/api/simplify'), {
         method: 'POST',
-        headers,
+        headers: getApiHeaders(),
         body: JSON.stringify({ text, mode }),
       });
 
@@ -177,10 +176,9 @@ export default function Simplifier({ text, position, onClose, onExpand }: Simpli
     setSendingFollowUp(true);
 
     try {
-      const headers = await getAuthHeaders();
       const response = await fetch(getApiUrl('/api/simplify'), {
         method: 'POST',
-        headers,
+        headers: getApiHeaders(),
         body: JSON.stringify({
           text: userMessage.content,
           mode: 'followup',

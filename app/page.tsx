@@ -5,7 +5,6 @@ import { BookOpen, Plus } from 'lucide-react';
 import BookReaderWrapper from '@/components/BookReaderWrapper';
 import HeroBookCard from '@/components/HeroBookCard';
 import RecentBookCard from '@/components/RecentBookCard';
-import AuthGate from '@/components/AuthGate';
 import { getRecentBooks } from '@/lib/libraryStorage';
 import { RecentBook } from '@/types/library';
 
@@ -153,21 +152,19 @@ export default function Home() {
   // Show reader when we have book data
   if (showReader && bookData) {
     return (
-      <AuthGate>
-        <div
-          className="transition-opacity duration-250"
-          style={{
-            opacity: isTransitioningToHome ? 0 : 1,
-            transitionDuration: `${TRANSITION_DURATION}ms`,
-          }}
-        >
-          <BookReaderWrapper
-            bookData={bookData}
-            filePath={currentFilePath}
-            onClose={closeReaderWithTransition}
-          />
-        </div>
-      </AuthGate>
+      <div
+        className="transition-opacity duration-250"
+        style={{
+          opacity: isTransitioningToHome ? 0 : 1,
+          transitionDuration: `${TRANSITION_DURATION}ms`,
+        }}
+      >
+        <BookReaderWrapper
+          bookData={bookData}
+          filePath={currentFilePath}
+          onClose={closeReaderWithTransition}
+        />
+      </div>
     );
   }
 
@@ -176,7 +173,6 @@ export default function Home() {
   const otherBooks = recentBooks.slice(1);
 
   return (
-    <AuthGate>
     <div
       className="min-h-screen transition-opacity"
       style={{
@@ -384,6 +380,5 @@ export default function Home() {
         }
       `}</style>
     </div>
-    </AuthGate>
   );
 }
