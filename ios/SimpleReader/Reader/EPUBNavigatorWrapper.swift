@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import ReadiumShared
 import ReadiumNavigator
 
@@ -18,6 +19,7 @@ struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
     let publication: Publication
     let initialLocator: Locator?
     let preferences: ReadingPreferences
+    let chromeInsets: ReaderChromeInsets
     let httpServer: HTTPServer
     let navigationRequest: EPUBNavigationRequest?
 
@@ -51,6 +53,7 @@ struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
         )
 
         navigator.delegate = context.coordinator
+        context.coordinator.chromeInsets = chromeInsets
 
         let hostingVC = ReaderHostingController(navigator: navigator)
         hostingVC.onSelectionAction = { text, mode in
@@ -64,6 +67,8 @@ struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ controller: ReaderHostingController, context: Context) {
+        context.coordinator.chromeInsets = chromeInsets
+
         // Apply updated preferences when they change
         let epubPrefs = buildEPUBPreferences()
         controller.navigator.submitPreferences(epubPrefs)
@@ -85,7 +90,7 @@ struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(parent: self)
+        Coordinator(parent: self, chromeInsets: chromeInsets)
     }
 
     // MARK: - Build Readium Preferences
@@ -119,9 +124,11 @@ struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
         let parent: EPUBNavigatorWrapper
         weak var navigator: EPUBNavigatorViewController?
         var lastNavigationRequestID: UUID?
+        var chromeInsets: ReaderChromeInsets
 
-        init(parent: EPUBNavigatorWrapper) {
+        init(parent: EPUBNavigatorWrapper, chromeInsets: ReaderChromeInsets) {
             self.parent = parent
+            self.chromeInsets = chromeInsets
         }
 
         // MARK: - NavigatorDelegate (required)
@@ -137,8 +144,21 @@ struct EPUBNavigatorWrapper: UIViewControllerRepresentable {
 
         // MARK: - VisualNavigatorDelegate (tap handling)
 
+        func navigatorContentInset(_ navigator: VisualNavigator) -> UIEdgeInsets? {
+            let navigatorView = (navigator as? UIViewController)?.view
+            let safeAreaInsets = navigatorView?.window?.safeAreaInsets
+                ?? navigatorView?.safeAreaInsets
+                ?? .zero
+
+            return UIEdgeInsets(
+                top: safeAreaInsets.top + chromeInsets.top,
+                left: safeAreaInsets.left,
+                bottom: safeAreaInsets.bottom + chromeInsets.bottom,
+                right: safeAreaInsets.right
+            )
+        }
+
         func navigator(_ navigator: VisualNavigator, didTapAt point: CGPoint) {
-            // Toggle toolbar on tap — point is relative to the navigator's view
             parent.onCenterTap()
         }
     }

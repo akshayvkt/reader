@@ -9,11 +9,6 @@ import ReadiumShared
 /// Custom text selection actions ("Explain", "ELI5") target methods on this controller.
 class ReaderHostingController: UIViewController {
 
-    private enum Layout {
-        static let topReadingChrome: CGFloat = 54
-        static let bottomReadingChrome: CGFloat = 76
-    }
-
     let navigator: EPUBNavigatorViewController
 
     /// Callback when user taps "Explain" or "ELI5" on selected text
@@ -43,16 +38,10 @@ class ReaderHostingController: UIViewController {
 
         navigator.view.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            navigator.view.topAnchor.constraint(
-                equalTo: view.safeAreaLayoutGuide.topAnchor,
-                constant: Layout.topReadingChrome
-            ),
+            navigator.view.topAnchor.constraint(equalTo: view.topAnchor),
             navigator.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             navigator.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            navigator.view.bottomAnchor.constraint(
-                equalTo: view.safeAreaLayoutGuide.bottomAnchor,
-                constant: -Layout.bottomReadingChrome
-            ),
+            navigator.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
     }
 

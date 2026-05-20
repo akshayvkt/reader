@@ -11,7 +11,7 @@ struct ReaderView: View {
     let book: RecentBook
     let publication: Publication
 
-    @State private var showToolbar = false
+    @State private var showToolbar = true
     @State private var preferences: ReadingPreferences
 
     // Text selection / AI popup state
@@ -52,6 +52,7 @@ struct ReaderView: View {
                 publication: publication,
                 initialLocator: restoreLocator(),
                 preferences: preferences,
+                chromeInsets: ReaderChromeLayout.contentInsets,
                 httpServer: appState.readiumService.httpServer,
                 navigationRequest: navigationRequest,
                 onSelectionAction: { text, mode in
@@ -65,7 +66,7 @@ struct ReaderView: View {
                     saveProgress(locator)
                 },
                 onCenterTap: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
+                    withAnimation(.easeInOut(duration: 0.18)) {
                         showToolbar.toggle()
                     }
                 }
@@ -80,8 +81,11 @@ struct ReaderView: View {
                         onBack: { appState.closeReader() },
                         onTOC: { showTableOfContents = true },
                         onSearch: { showSearch = true },
-                        onSettings: { showSettings = true }
+                        onSettings: { showSettings = true },
+                        onChat: openReaderChat
                     )
+                    .offset(y: ReaderChromeLayout.toolbarYOffset)
+
                     Spacer()
 
                     if let progress = currentLocator?.locations.totalProgression {
@@ -89,17 +93,12 @@ struct ReaderView: View {
                             .font(.caption.weight(.medium))
                             .foregroundStyle(DesignSystem.Colors.foregroundSubtle)
                             .frame(maxWidth: .infinity)
-                            .padding(.bottom, DesignSystem.Spacing.lg)
+                            .padding(.bottom, ReaderChromeLayout.bottomControlGap)
                     }
                 }
                 .transition(.opacity)
             }
-
-            if !showChat && !showSelectionPopup {
-                floatingChatButton
-            }
         }
-        .statusBarHidden(!showToolbar)
         .task(id: book.id) {
             if let currentLocator {
                 updateChapterTitle(from: currentLocator)
@@ -178,25 +177,6 @@ struct ReaderView: View {
     }
 
     // MARK: - Chat
-
-    private var floatingChatButton: some View {
-        VStack {
-            Spacer()
-            HStack {
-                Spacer()
-                LiquidGlassIconButton(
-                    systemName: "message.fill",
-                    accessibilityLabel: conversation == nil ? "Open chat" : "Reopen chat",
-                    size: 44,
-                    font: .title3.weight(.semibold),
-                    foreground: DesignSystem.Colors.accent,
-                    action: openReaderChat
-                )
-            }
-            .padding(.trailing, DesignSystem.Spacing.lg)
-            .padding(.bottom, DesignSystem.Spacing.xxl)
-        }
-    }
 
     private func openReaderChat() {
         if let conversation {

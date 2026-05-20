@@ -7,12 +7,14 @@ struct ReaderToolbar: View {
     var onTOC: () -> Void
     var onSearch: () -> Void
     var onSettings: () -> Void
+    var onChat: () -> Void
 
     var body: some View {
         HStack(spacing: DesignSystem.Spacing.sm) {
             LiquidGlassIconButton(
                 systemName: "chevron.left",
                 accessibilityLabel: "Back",
+                size: ReaderChromeLayout.toolbarButtonSize,
                 action: onBack
             )
 
@@ -23,34 +25,103 @@ struct ReaderToolbar: View {
                 .frame(maxWidth: .infinity)
 
             HStack(spacing: DesignSystem.Spacing.xs) {
-                LiquidGlassIconButton(
-                    systemName: "list.bullet",
-                    accessibilityLabel: "Table of contents",
-                    action: onTOC
+                ReaderToolbarMenuButton(
+                    onTOC: onTOC,
+                    onSearch: onSearch,
+                    onSettings: onSettings
                 )
-
                 LiquidGlassIconButton(
-                    systemName: "magnifyingglass",
-                    accessibilityLabel: "Search",
-                    action: onSearch
-                )
-
-                LiquidGlassIconButton(
-                    systemName: "textformat.size",
-                    accessibilityLabel: "Reading settings",
-                    action: onSettings
+                    systemName: "message.fill",
+                    accessibilityLabel: "Open chat",
+                    size: ReaderChromeLayout.toolbarButtonSize,
+                    font: .body.weight(.semibold),
+                    foreground: DesignSystem.Colors.accent,
+                    action: onChat
                 )
             }
         }
         .padding(.horizontal, DesignSystem.Spacing.xl)
-        .padding(.vertical, DesignSystem.Spacing.xs)
+        .padding(.vertical, ReaderChromeLayout.toolbarVerticalPadding)
+    }
+}
+
+struct ReaderChromeInsets: Equatable {
+    /// Extra reader inset beyond the device safe area.
+    let top: CGFloat
+    let bottom: CGFloat
+}
+
+enum ReaderChromeLayout {
+    static let toolbarButtonSize: CGFloat = 36
+    static let toolbarVerticalPadding = DesignSystem.Spacing.xs
+    static let toolbarTextGap: CGFloat = 14
+    static let toolbarYOffset: CGFloat = -6
+
+    static let bottomControlGap: CGFloat = 6
+    static let progressHeight: CGFloat = 18
+
+    static var toolbarHeight: CGFloat {
+        toolbarButtonSize + (toolbarVerticalPadding * 2)
+    }
+
+    static var bottomInset: CGFloat {
+        progressHeight + bottomControlGap
+    }
+
+    static var contentInsets: ReaderChromeInsets {
+        ReaderChromeInsets(
+            top: toolbarHeight + toolbarTextGap,
+            bottom: bottomInset
+        )
+    }
+}
+
+private struct ReaderToolbarMenuButton: View {
+    var onTOC: () -> Void
+    var onSearch: () -> Void
+    var onSettings: () -> Void
+
+    @ViewBuilder
+    var body: some View {
+        if #available(iOS 26.0, *) {
+            menuButton
+                .buttonStyle(.glass)
+        } else {
+            menuButton
+                .buttonStyle(LiquidGlassFallbackButtonStyle())
+        }
+    }
+
+    private var menuButton: some View {
+        Menu {
+            Button(action: onTOC) {
+                Label("Table of contents", systemImage: "list.bullet")
+            }
+            Button(action: onSearch) {
+                Label("Search", systemImage: "magnifyingglass")
+            }
+            Button(action: onSettings) {
+                Label("Reading settings", systemImage: "textformat.size")
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.body.weight(.medium))
+                .foregroundStyle(DesignSystem.Colors.foreground)
+                .frame(
+                    width: ReaderChromeLayout.toolbarButtonSize,
+                    height: ReaderChromeLayout.toolbarButtonSize
+                )
+                .contentShape(Circle())
+        }
+        .buttonBorderShape(.circle)
+        .accessibilityLabel("Reader actions")
     }
 }
 
 struct LiquidGlassIconButton: View {
     let systemName: String
     let accessibilityLabel: String
-    var size: CGFloat = 36
+    var size: CGFloat = ReaderChromeLayout.toolbarButtonSize
     var font: Font = .body.weight(.medium)
     var foreground: Color = DesignSystem.Colors.foreground
     var prominent: Bool = false
