@@ -27,7 +27,7 @@ function base64urlDecode(str: string): string {
 }
 
 // Get the secret key for signing
-function getSecretKey(): Uint8Array {
+function getSecretKey(): Uint8Array<ArrayBuffer> {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
     throw new Error('JWT_SECRET environment variable is not set');

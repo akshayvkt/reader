@@ -98,6 +98,10 @@ export default function Home() {
     openBookWithTransition(arrayBuffer, libraryPath);
   }, [openBookWithTransition]);
 
+  const openFilePicker = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
   // Open a book from the recent books list
   const openBook = useCallback(async (book: RecentBook) => {
     // If we have a file path and we're in Electron, read the file directly
@@ -121,7 +125,7 @@ export default function Home() {
       // Fallback for browser or books without filePath: open file picker
       openFilePicker();
     }
-  }, [openBookWithTransition]);
+  }, [openBookWithTransition, openFilePicker]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -145,10 +149,6 @@ export default function Home() {
     const file = e.target.files?.[0];
     if (file) handleFileUpload(file);
   }, [handleFileUpload]);
-
-  const openFilePicker = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
 
   // Show reader when we have book data
   if (showReader && bookData) {
