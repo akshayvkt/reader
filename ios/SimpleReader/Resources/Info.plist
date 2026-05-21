@@ -9,7 +9,7 @@
 	<key>CFBundleDisplayName</key>
 	<string>Simple Reader</string>
 	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<string>7</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundlePackageType</key>
