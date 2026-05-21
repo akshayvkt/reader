@@ -6,13 +6,20 @@ struct MessageBubbleView: View {
     let message: ChatMessage
 
     var body: some View {
-        HStack {
-            if message.role == .user {
-                Spacer(minLength: 60)
-            }
+        switch message.role {
+        case .user:
+            userMessage
+        case .assistant:
+            assistantMessage
+        }
+    }
 
-            VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
-                Text(message.role == .user ? "You" : "Reader")
+    private var userMessage: some View {
+        HStack {
+            Spacer(minLength: 72)
+
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("You")
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(DesignSystem.Colors.foregroundSubtle)
 
@@ -21,18 +28,23 @@ struct MessageBubbleView: View {
                     .foregroundStyle(DesignSystem.Colors.foreground)
                     .padding(.horizontal, DesignSystem.Spacing.md)
                     .padding(.vertical, DesignSystem.Spacing.sm)
-                    .background(
-                        message.role == .user
-                            ? DesignSystem.Colors.backgroundMuted
-                            : Color.clear
-                    )
-                    .cornerRadius(DesignSystem.CornerRadius.medium)
-            }
-
-            if message.role == .assistant {
-                Spacer(minLength: 60)
+                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
         }
+    }
+
+    private var assistantMessage: some View {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
+            Text("Reader")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(DesignSystem.Colors.foregroundSubtle)
+
+            Text(markdownToAttributed(message.content))
+                .font(.subheadline)
+                .foregroundStyle(DesignSystem.Colors.foreground)
+                .textSelection(.enabled)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func markdownToAttributed(_ string: String) -> AttributedString {

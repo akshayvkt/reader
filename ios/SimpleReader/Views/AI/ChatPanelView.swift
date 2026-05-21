@@ -12,10 +12,8 @@ struct ChatPanelView: View {
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: DesignSystem.Spacing.sm) {
             header
-
-            Divider()
 
             ScopeSelectorView(
                 selectedScope: $conversation.scope,
@@ -24,21 +22,15 @@ struct ChatPanelView: View {
                 hasBookContext: conversation.bookText != nil
             )
             .padding(.horizontal, DesignSystem.Spacing.lg)
-            .padding(.vertical, DesignSystem.Spacing.md)
-
-            Divider()
+            .padding(.top, DesignSystem.Spacing.xs)
 
             messagesView
 
-            Divider()
-
             inputBar
         }
-        .background(DesignSystem.Colors.background)
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                isInputFocused = true
-            }
+        .background {
+            DesignSystem.Colors.background.opacity(0.88)
+                .ignoresSafeArea()
         }
     }
 
@@ -61,16 +53,15 @@ struct ChatPanelView: View {
                 Image(systemName: "xmark")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(DesignSystem.Colors.foreground)
-                    .frame(width: 34, height: 34)
-                    .background(DesignSystem.Colors.backgroundMuted, in: Circle())
+                    .frame(width: 32, height: 32)
+                    .background(.thinMaterial, in: Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Close chat")
         }
         .padding(.horizontal, DesignSystem.Spacing.lg)
-        .padding(.top, DesignSystem.Spacing.lg)
-        .padding(.bottom, DesignSystem.Spacing.md)
-        .background(DesignSystem.Colors.surface)
+        .padding(.top, DesignSystem.Spacing.md)
+        .padding(.bottom, DesignSystem.Spacing.xs)
     }
 
     private var messagesView: some View {
@@ -111,6 +102,7 @@ struct ChatPanelView: View {
                     }
                 }
                 .padding(DesignSystem.Spacing.lg)
+                .padding(.top, DesignSystem.Spacing.xs)
             }
             .onChange(of: conversation.messages.count) { _, _ in
                 if let lastId = conversation.messages.last?.id {
@@ -155,8 +147,11 @@ struct ChatPanelView: View {
             }
             .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSending || !activeScopeIsReady)
         }
-        .padding(DesignSystem.Spacing.md)
-        .background(DesignSystem.Colors.surface)
+        .padding(.horizontal, DesignSystem.Spacing.md)
+        .padding(.vertical, DesignSystem.Spacing.sm)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .padding(.horizontal, DesignSystem.Spacing.lg)
+        .padding(.bottom, DesignSystem.Spacing.sm)
     }
 
     // MARK: - Send Message

@@ -28,6 +28,7 @@ struct ReaderView: View {
     // Chat state
     @State private var conversation: ConversationContext?
     @State private var presentedConversation: ConversationContext?
+    @State private var chatDetent: PresentationDetent = .fraction(0.40)
 
     // Current reading position
     @State private var currentLocator: Locator?
@@ -90,7 +91,7 @@ struct ReaderView: View {
 
                     Spacer()
 
-                    if let pageProgressText {
+                    if presentedConversation == nil, let pageProgressText {
                         Text(pageProgressText)
                             .font(.caption.weight(.medium))
                             .foregroundStyle(DesignSystem.Colors.foregroundSubtle)
@@ -172,8 +173,12 @@ struct ReaderView: View {
                 apiClient: appState.apiClient,
                 onClose: { presentedConversation = nil }
             )
-            .presentationDetents([.large])
+            .presentationDetents([.fraction(0.40), .fraction(0.65), .large], selection: $chatDetent)
             .presentationDragIndicator(.visible)
+            .presentationBackground(.regularMaterial)
+            .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.40)))
+            .presentationCornerRadius(32)
+            .presentationContentInteraction(.scrolls)
         }
         .preferredColorScheme(preferences.colorSchemeOverride)
     }
@@ -201,6 +206,7 @@ struct ReaderView: View {
 
     private func openReaderChat() {
         if let conversation {
+            chatDetent = .fraction(0.40)
             presentedConversation = conversation
             if conversation.chapterText == nil || conversation.bookText == nil {
                 loadReaderContexts(for: conversation)
@@ -216,6 +222,7 @@ struct ReaderView: View {
             chapterTitle: currentChapterTitle ?? "Current Chapter"
         )
         conversation = nextConversation
+        chatDetent = .fraction(0.40)
         presentedConversation = nextConversation
         loadReaderContexts(for: nextConversation)
     }
