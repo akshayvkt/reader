@@ -33,6 +33,9 @@ final class VoiceSessionManager {
     @ObservationIgnored private var isPlaybackActive = false
     @ObservationIgnored private var playbackStartedAt: Date?
     @ObservationIgnored private var scheduledPlaybackBufferCount = 0
+    @ObservationIgnored private var discardAssistantAudioUntil: Date?
+
+    private let staleAssistantAudioDiscardDuration: TimeInterval = 0.5
 
     private static var defaultEndpoint: URL {
         if let override = ProcessInfo.processInfo.environment["SIMPLEREADER_VOICE_WS_URL"],
@@ -55,6 +58,7 @@ final class VoiceSessionManager {
         transcript = []
         latestUserText = ""
         latestAssistantText = ""
+        discardAssistantAudioUntil = nil
         phase = .preparing
 
         do {
@@ -189,6 +193,7 @@ final class VoiceSessionManager {
 
         case "interrupted":
             flushPlayback()
+            discardAssistantAudioUntil = Date().addingTimeInterval(staleAssistantAudioDiscardDuration)
             phase = .listening
 
         case "turn_complete":
@@ -375,8 +380,7 @@ final class VoiceSessionManager {
         let inputNode = engine.inputNode
         let outputNode = engine.outputNode
 
-        try? inputNode.setVoiceProcessingEnabled(true)
-        try? outputNode.setVoiceProcessingEnabled(true)
+        try enableVoiceProcessing(inputNode: inputNode, outputNode: outputNode)
 
         guard let playbackFormat = AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
@@ -396,6 +400,21 @@ final class VoiceSessionManager {
         playerNode = player
     }
 
+    private func enableVoiceProcessing(
+        inputNode: AVAudioInputNode,
+        outputNode: AVAudioOutputNode
+    ) throws {
+        try inputNode.setVoiceProcessingEnabled(true)
+        try outputNode.setVoiceProcessingEnabled(true)
+
+        if !inputNode.isVoiceProcessingEnabled || !outputNode.isVoiceProcessingEnabled {
+            throw VoiceSessionError.audioConfigurationFailed
+        }
+
+        inputNode.isVoiceProcessingBypassed = false
+        inputNode.isVoiceProcessingAGCEnabled = true
+    }
+
     private func playAudio(_ data: Data) {
         guard let playerNode,
               let audioEngine,
@@ -406,6 +425,14 @@ final class VoiceSessionManager {
                 interleaved: false
               ) else {
             return
+        }
+
+        if let discardAssistantAudioUntil {
+            if Date() < discardAssistantAudioUntil {
+                return
+            }
+
+            self.discardAssistantAudioUntil = nil
         }
 
         let sampleCount = data.count / MemoryLayout<Int16>.size
@@ -475,6 +502,7 @@ final class VoiceSessionManager {
         scheduledPlaybackBufferCount = 0
         isPlaybackActive = false
         playbackStartedAt = nil
+        discardAssistantAudioUntil = nil
 
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
