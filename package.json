@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "next start",
+    "start": "NODE_ENV=production node server.js",
     "lint": "eslint",
     "electron-dev": "NODE_ENV=development electron .",
     "electron-build": "export SKIP_NOTARIZE=true && export BUILD_TARGET=electron && next build && electron-builder --config.mac.identity=null",
@@ -25,7 +25,8 @@
     "pdfjs-dist": "^4.10.38",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "react-markdown": "^10.1.0"
+    "react-markdown": "^10.1.0",
+    "ws": "^8.20.1"
   },
   "devDependencies": {
     "@electron/notarize": "^3.1.1",
