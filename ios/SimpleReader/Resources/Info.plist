@@ -18,6 +18,8 @@
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Simple Reader uses the microphone for hands-free voice conversations about your book.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UIRequiredDeviceCapabilities</key>

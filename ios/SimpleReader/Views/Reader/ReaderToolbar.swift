@@ -7,7 +7,9 @@ struct ReaderToolbar: View {
     var onTOC: () -> Void
     var onSearch: () -> Void
     var onSettings: () -> Void
+    var onVoice: () -> Void
     var onChat: () -> Void
+    var isVoiceActive: Bool = false
 
     var body: some View {
         HStack(spacing: DesignSystem.Spacing.sm) {
@@ -29,6 +31,14 @@ struct ReaderToolbar: View {
                     onTOC: onTOC,
                     onSearch: onSearch,
                     onSettings: onSettings
+                )
+                LiquidGlassIconButton(
+                    systemName: isVoiceActive ? "waveform.circle.fill" : "mic.fill",
+                    accessibilityLabel: isVoiceActive ? "Open voice transcript" : "Start voice",
+                    size: ReaderChromeLayout.toolbarButtonSize,
+                    font: .body.weight(.semibold),
+                    foreground: isVoiceActive ? DesignSystem.Colors.accent : DesignSystem.Colors.foreground,
+                    action: onVoice
                 )
                 LiquidGlassIconButton(
                     systemName: "message.fill",

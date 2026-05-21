@@ -30,6 +30,11 @@ struct ReaderView: View {
     @State private var presentedConversation: ConversationContext?
     @State private var chatDetent: PresentationDetent = .fraction(0.40)
 
+    // Voice state
+    @State private var voiceSession = VoiceSessionManager()
+    @State private var showVoiceTranscript = false
+    @State private var voiceTranscriptDetent: PresentationDetent = .fraction(0.40)
+
     // Current reading position
     @State private var currentLocator: Locator?
     @State private var currentChapterTitle: String?
@@ -81,17 +86,19 @@ struct ReaderView: View {
                 VStack {
                     ReaderToolbar(
                         chapterTitle: currentChapterTitle ?? book.title,
-                        onBack: { appState.closeReader() },
+                        onBack: closeReader,
                         onTOC: { showTableOfContents = true },
                         onSearch: { showSearch = true },
                         onSettings: { showSettings = true },
-                        onChat: openReaderChat
+                        onVoice: openReaderVoice,
+                        onChat: openReaderChat,
+                        isVoiceActive: voiceSession.isActive
                     )
                     .offset(y: ReaderChromeLayout.toolbarYOffset)
 
                     Spacer()
 
-                    if presentedConversation == nil, let pageProgressText {
+                    if presentedConversation == nil, !showVoiceTranscript, let pageProgressText {
                         Text(pageProgressText)
                             .font(.caption.weight(.medium))
                             .foregroundStyle(DesignSystem.Colors.foregroundSubtle)
@@ -100,6 +107,22 @@ struct ReaderView: View {
                     }
                 }
                 .transition(.opacity)
+            }
+
+            if voiceSession.isActive, !showVoiceTranscript {
+                VStack {
+                    Spacer()
+
+                    VoiceOverlayView(
+                        session: voiceSession,
+                        onTranscript: {
+                            voiceTranscriptDetent = .fraction(0.40)
+                            showVoiceTranscript = true
+                        }
+                    )
+                    .padding(.bottom, ReaderChromeLayout.bottomInset + 54)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .task(id: book.id) {
@@ -180,6 +203,18 @@ struct ReaderView: View {
             .presentationCornerRadius(32)
             .presentationContentInteraction(.scrolls)
         }
+        .sheet(isPresented: $showVoiceTranscript) {
+            VoiceTranscriptSheetView(
+                session: voiceSession,
+                onClose: { showVoiceTranscript = false }
+            )
+            .presentationDetents([.fraction(0.40), .fraction(0.70)], selection: $voiceTranscriptDetent)
+            .presentationDragIndicator(.visible)
+            .presentationBackground(.regularMaterial)
+            .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.40)))
+            .presentationCornerRadius(32)
+            .presentationContentInteraction(.scrolls)
+        }
         .preferredColorScheme(preferences.colorSchemeOverride)
     }
 
@@ -225,6 +260,33 @@ struct ReaderView: View {
         chatDetent = .fraction(0.40)
         presentedConversation = nextConversation
         loadReaderContexts(for: nextConversation)
+    }
+
+    private func openReaderVoice() {
+        if voiceSession.isActive {
+            voiceTranscriptDetent = .fraction(0.40)
+            showVoiceTranscript = true
+            return
+        }
+
+        voiceSession.markPreparing()
+
+        Task {
+            let chapterData = await extractCurrentChapter()
+            let voiceContext = VoiceSessionContext(
+                bookTitle: book.title,
+                chapterTitle: chapterData?.title ?? currentChapterTitle ?? "Current Chapter",
+                scope: .chapter,
+                scopeContext: chapterData?.text
+            )
+
+            await voiceSession.start(context: voiceContext)
+        }
+    }
+
+    private func closeReader() {
+        voiceSession.stop()
+        appState.closeReader()
     }
 
     private func loadReaderContexts(for targetConversation: ConversationContext) {

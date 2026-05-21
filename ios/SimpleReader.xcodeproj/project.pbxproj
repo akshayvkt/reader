@@ -3,13 +3,15 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		004225C708F70B7C6A8D0E84 /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB87F297B42A21C642F9471 /* ReaderView.swift */; };
 		006F49626BBA7054A62F7496 /* SelectionPopupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D5AFD4FE2A6CB89CFD84296 /* SelectionPopupView.swift */; };
+		008666BA9B0BF89C995FF4CA /* VoiceSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B21F81FAE8FA8732DD0D8B5 /* VoiceSessionManager.swift */; };
 		0E1F3C885D161041AD97B6FB /* EPUBNavigatorWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 395E8BA027CF8BB0CCA9F561 /* EPUBNavigatorWrapper.swift */; };
+		0F323A3DEAFB18BBBC2D77ED /* VoiceOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A669730E1282C37D9DEB57C0 /* VoiceOverlayView.swift */; };
 		10441D9A75E297D5F583201E /* ReadiumAdapterGCDWebServer in Frameworks */ = {isa = PBXBuildFile; productRef = 85C462528E91CD2C2A11B36F /* ReadiumAdapterGCDWebServer */; };
 		1568A3081332CCC47748222A /* RecentBookCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F479C110AB4C3E4E87C2F46 /* RecentBookCard.swift */; };
 		183F9EA61A6140280385FD00 /* BookCoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD03B05CA7B71448FBFC6F98 /* BookCoverView.swift */; };
@@ -28,6 +30,7 @@
 		7B279B50E8156890205C1374 /* SimpleReaderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42450502D5C3DAF42DD14770 /* SimpleReaderApp.swift */; };
 		7B8A334613707ED70191429D /* BookLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A64E930610751339076EB31E /* BookLibrary.swift */; };
 		851BCAE76126AC99BA91C2F2 /* ReaderHostingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9F481DA916AFB506718E301 /* ReaderHostingController.swift */; };
+		8742544223EC5BC3E24B0F6A /* VoiceSessionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE7E6947FDB57C1A669A4369 /* VoiceSessionModels.swift */; };
 		89614B528D5D035F7D07242B /* ChatPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76F39B625B510B4959AF3221 /* ChatPanelView.swift */; };
 		8C164F77A357A73D40AA7611 /* ReadiumShared in Frameworks */ = {isa = PBXBuildFile; productRef = B7EDA0EB6B53ED2E84F063ED /* ReadiumShared */; };
 		918F3FC6C146077B374D467C /* TypographySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7415AF6A70E3B1BC5A82897E /* TypographySettingsView.swift */; };
@@ -44,8 +47,9 @@
 		1A19A4EF8FB3AAAA19FE19D9 /* ConversationContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationContext.swift; sourceTree = "<group>"; };
 		1D5AFD4FE2A6CB89CFD84296 /* SelectionPopupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionPopupView.swift; sourceTree = "<group>"; };
 		1F479C110AB4C3E4E87C2F46 /* RecentBookCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentBookCard.swift; sourceTree = "<group>"; };
-		3184FB6B4ABE205AF958C788 /* SimpleReader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimpleReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3184FB6B4ABE205AF958C788 /* SimpleReader.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = SimpleReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		395E8BA027CF8BB0CCA9F561 /* EPUBNavigatorWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPUBNavigatorWrapper.swift; sourceTree = "<group>"; };
+		3B21F81FAE8FA8732DD0D8B5 /* VoiceSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSessionManager.swift; sourceTree = "<group>"; };
 		3DB7E02712191EB8C5F61CCA /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		42450502D5C3DAF42DD14770 /* SimpleReaderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleReaderApp.swift; sourceTree = "<group>"; };
 		44DF1E963DA3947DCFA34E11 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
@@ -60,6 +64,7 @@
 		8D66AD08A9BFA7617606C220 /* RecentBook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentBook.swift; sourceTree = "<group>"; };
 		96CA25D32EF7B34A5653AF45 /* ReadingPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingPreferences.swift; sourceTree = "<group>"; };
 		A64E930610751339076EB31E /* BookLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookLibrary.swift; sourceTree = "<group>"; };
+		A669730E1282C37D9DEB57C0 /* VoiceOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceOverlayView.swift; sourceTree = "<group>"; };
 		ADF20DCD597A019754D2672A /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		AE26678519E520EAF192F960 /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		BD822462A59527EEA5C26373 /* ReaderToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderToolbar.swift; sourceTree = "<group>"; };
@@ -67,6 +72,7 @@
 		C9D12099F33BEB5A71BF97A1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		D3118834902BF8E7D282CA7A /* MessageBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubbleView.swift; sourceTree = "<group>"; };
 		D9F481DA916AFB506718E301 /* ReaderHostingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderHostingController.swift; sourceTree = "<group>"; };
+		DE7E6947FDB57C1A669A4369 /* VoiceSessionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSessionModels.swift; sourceTree = "<group>"; };
 		E7661A618D6587E02B2A491C /* BookImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookImporter.swift; sourceTree = "<group>"; };
 		E7A9B1C8050B89A0472AEC97 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		FD03B05CA7B71448FBFC6F98 /* BookCoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookCoverView.swift; sourceTree = "<group>"; };
@@ -94,6 +100,7 @@
 				1A19A4EF8FB3AAAA19FE19D9 /* ConversationContext.swift */,
 				96CA25D32EF7B34A5653AF45 /* ReadingPreferences.swift */,
 				8D66AD08A9BFA7617606C220 /* RecentBook.swift */,
+				DE7E6947FDB57C1A669A4369 /* VoiceSessionModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -105,6 +112,7 @@
 				E7661A618D6587E02B2A491C /* BookImporter.swift */,
 				A64E930610751339076EB31E /* BookLibrary.swift */,
 				6F3DD8668CB09AB20C8C9155 /* ReadiumService.swift */,
+				3B21F81FAE8FA8732DD0D8B5 /* VoiceSessionManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -142,11 +150,19 @@
 			isa = PBXGroup;
 			children = (
 				9805592A9F282E2B9BE1059F /* AI */,
+				8B885994971EAB34C7BFA068 /* Auth */,
 				9B553AA3CB7A4214A182E866 /* Library */,
 				971F99CB5C6AB5480C2624D4 /* Reader */,
 				61BE2EACCBE0C3D636D1AF57 /* Shared */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		8B885994971EAB34C7BFA068 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Auth;
 			sourceTree = "<group>";
 		};
 		971F99CB5C6AB5480C2624D4 /* Reader */ = {
@@ -168,6 +184,7 @@
 				D3118834902BF8E7D282CA7A /* MessageBubbleView.swift */,
 				61975C9E8893D467733D9DDE /* ScopeSelectorView.swift */,
 				1D5AFD4FE2A6CB89CFD84296 /* SelectionPopupView.swift */,
+				A669730E1282C37D9DEB57C0 /* VoiceOverlayView.swift */,
 			);
 			path = AI;
 			sourceTree = "<group>";
@@ -282,6 +299,7 @@
 			packageReferences = (
 				CB9BD69C29528E32BA0EAE7A /* XCRemoteSwiftPackageReference "swift-toolkit" */,
 			);
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -332,6 +350,9 @@
 				7B279B50E8156890205C1374 /* SimpleReaderApp.swift in Sources */,
 				C58D47BF7BE3641558231D3F /* TableOfContentsView.swift in Sources */,
 				918F3FC6C146077B374D467C /* TypographySettingsView.swift in Sources */,
+				0F323A3DEAFB18BBBC2D77ED /* VoiceOverlayView.swift in Sources */,
+				008666BA9B0BF89C995FF4CA /* VoiceSessionManager.swift in Sources */,
+				8742544223EC5BC3E24B0F6A /* VoiceSessionModels.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -463,7 +484,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 6;
-				DEVELOPMENT_TEAM = 65H9JV933T;
 				INFOPLIST_FILE = SimpleReader/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -484,7 +504,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 6;
-				DEVELOPMENT_TEAM = 65H9JV933T;
 				INFOPLIST_FILE = SimpleReader/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
