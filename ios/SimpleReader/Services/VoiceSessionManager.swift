@@ -363,7 +363,7 @@ final class VoiceSessionManager {
         #if targetEnvironment(simulator)
         return 0.22
         #else
-        return 0.10
+        return 0
         #endif
     }
 
