@@ -23,9 +23,7 @@ struct MessageBubbleView: View {
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(DesignSystem.Colors.foregroundSubtle)
 
-                Text(markdownToAttributed(message.content))
-                    .font(.subheadline)
-                    .foregroundStyle(DesignSystem.Colors.foreground)
+                MarkdownMessageView(content: message.content)
                     .padding(.horizontal, DesignSystem.Spacing.md)
                     .padding(.vertical, DesignSystem.Spacing.sm)
                     .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -39,15 +37,8 @@ struct MessageBubbleView: View {
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(DesignSystem.Colors.foregroundSubtle)
 
-            Text(markdownToAttributed(message.content))
-                .font(.subheadline)
-                .foregroundStyle(DesignSystem.Colors.foreground)
-                .textSelection(.enabled)
+            MarkdownMessageView(content: message.content)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func markdownToAttributed(_ string: String) -> AttributedString {
-        (try? AttributedString(markdown: string, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(string)
     }
 }

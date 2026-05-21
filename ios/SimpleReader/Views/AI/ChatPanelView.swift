@@ -23,6 +23,7 @@ struct ChatPanelView: View {
             )
             .padding(.horizontal, DesignSystem.Spacing.lg)
             .padding(.top, DesignSystem.Spacing.xs)
+            .simultaneousGesture(TapGesture().onEnded { dismissKeyboard() })
 
             messagesView
 
@@ -62,6 +63,8 @@ struct ChatPanelView: View {
         .padding(.horizontal, DesignSystem.Spacing.lg)
         .padding(.top, DesignSystem.Spacing.md)
         .padding(.bottom, DesignSystem.Spacing.xs)
+        .contentShape(Rectangle())
+        .simultaneousGesture(TapGesture().onEnded { dismissKeyboard() })
     }
 
     private var messagesView: some View {
@@ -104,6 +107,9 @@ struct ChatPanelView: View {
                 .padding(DesignSystem.Spacing.lg)
                 .padding(.top, DesignSystem.Spacing.xs)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .contentShape(Rectangle())
+            .onTapGesture(perform: dismissKeyboard)
             .onChange(of: conversation.messages.count) { _, _ in
                 if let lastId = conversation.messages.last?.id {
                     withAnimation {
@@ -235,5 +241,9 @@ struct ChatPanelView: View {
             }
             isSending = false
         }
+    }
+
+    private func dismissKeyboard() {
+        isInputFocused = false
     }
 }

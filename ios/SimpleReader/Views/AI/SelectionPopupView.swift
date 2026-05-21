@@ -135,9 +135,7 @@ struct SelectionPopupView: View {
                             .foregroundStyle(DesignSystem.Colors.foregroundSubtle)
                     }
 
-                    Text(markdownToAttributed(message.content))
-                        .font(.subheadline)
-                        .foregroundStyle(DesignSystem.Colors.foreground)
+                    MarkdownMessageView(content: message.content)
                 }
 
                 if isSendingFollowUp {
@@ -229,9 +227,4 @@ struct SelectionPopupView: View {
         }
     }
 
-    // MARK: - Markdown Helper
-
-    private func markdownToAttributed(_ string: String) -> AttributedString {
-        (try? AttributedString(markdown: string, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(string)
-    }
 }

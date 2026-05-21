@@ -37,6 +37,7 @@
 		91B3E976646D0B9A61703019 /* MessageBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3118834902BF8E7D282CA7A /* MessageBubbleView.swift */; };
 		947FE0F1C75403560BF10CAB /* HeroBookCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68B75101BEE0FE4FC3F3887E /* HeroBookCard.swift */; };
 		BC07A795212AC3AAF627FCB5 /* ReadiumService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F3DD8668CB09AB20C8C9155 /* ReadiumService.swift */; };
+		BD891651AECB3C19FD708324 /* MarkdownMessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B4F3BC94AD1BFDA5BF80080 /* MarkdownMessageView.swift */; };
 		C294FF0EBDABB4925F1D386D /* RecentBook.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D66AD08A9BFA7617606C220 /* RecentBook.swift */; };
 		C58D47BF7BE3641558231D3F /* TableOfContentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7168EF79487A0E19609D24CE /* TableOfContentsView.swift */; };
 		EFEA0BF307D4E4EF14D80179 /* ConversationContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A19A4EF8FB3AAAA19FE19D9 /* ConversationContext.swift */; };
@@ -63,6 +64,7 @@
 		76F39B625B510B4959AF3221 /* ChatPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPanelView.swift; sourceTree = "<group>"; };
 		8D66AD08A9BFA7617606C220 /* RecentBook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentBook.swift; sourceTree = "<group>"; };
 		96CA25D32EF7B34A5653AF45 /* ReadingPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingPreferences.swift; sourceTree = "<group>"; };
+		9B4F3BC94AD1BFDA5BF80080 /* MarkdownMessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownMessageView.swift; sourceTree = "<group>"; };
 		A64E930610751339076EB31E /* BookLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookLibrary.swift; sourceTree = "<group>"; };
 		A669730E1282C37D9DEB57C0 /* VoiceOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceOverlayView.swift; sourceTree = "<group>"; };
 		ADF20DCD597A019754D2672A /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
@@ -181,6 +183,7 @@
 			isa = PBXGroup;
 			children = (
 				76F39B625B510B4959AF3221 /* ChatPanelView.swift */,
+				9B4F3BC94AD1BFDA5BF80080 /* MarkdownMessageView.swift */,
 				D3118834902BF8E7D282CA7A /* MessageBubbleView.swift */,
 				61975C9E8893D467733D9DDE /* ScopeSelectorView.swift */,
 				1D5AFD4FE2A6CB89CFD84296 /* SelectionPopupView.swift */,
@@ -341,6 +344,7 @@
 				0E1F3C885D161041AD97B6FB /* EPUBNavigatorWrapper.swift in Sources */,
 				947FE0F1C75403560BF10CAB /* HeroBookCard.swift in Sources */,
 				59611F89E884E1EF6CE8FC5F /* LibraryView.swift in Sources */,
+				BD891651AECB3C19FD708324 /* MarkdownMessageView.swift in Sources */,
 				91B3E976646D0B9A61703019 /* MessageBubbleView.swift in Sources */,
 				851BCAE76126AC99BA91C2F2 /* ReaderHostingController.swift in Sources */,
 				5255334C83FB8458C23A00A4 /* ReaderToolbar.swift in Sources */,
@@ -488,7 +492,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = 65H9JV933T;
 				INFOPLIST_FILE = SimpleReader/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -509,7 +513,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = 65H9JV933T;
 				INFOPLIST_FILE = SimpleReader/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
