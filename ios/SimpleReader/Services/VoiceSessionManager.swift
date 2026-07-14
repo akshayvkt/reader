@@ -30,12 +30,10 @@ final class VoiceSessionManager {
     @ObservationIgnored private var playerNode: AVAudioPlayerNode?
     @ObservationIgnored private let audioQueue = DispatchQueue(label: "com.dysun.simplereader.voice-audio")
     @ObservationIgnored private var isStopping = false
-    @ObservationIgnored private var isPlaybackActive = false
-    @ObservationIgnored private var playbackStartedAt: Date?
+    @ObservationIgnored private var sessionGeneration = 0
     @ObservationIgnored private var scheduledPlaybackBufferCount = 0
-    @ObservationIgnored private var discardAssistantAudioUntil: Date?
-
-    private let staleAssistantAudioDiscardDuration: TimeInterval = 0.5
+    @ObservationIgnored private var playbackGeneration = 0
+    @ObservationIgnored private let echoGuard = VoiceEchoGuard()
 
     private static var defaultEndpoint: URL {
         if let override = ProcessInfo.processInfo.environment["SIMPLEREADER_VOICE_WS_URL"],
@@ -54,19 +52,23 @@ final class VoiceSessionManager {
     func start(context: VoiceSessionContext, endpoint: URL = VoiceSessionManager.defaultEndpoint) async {
         guard !isActive || phase == .preparing else { return }
 
+        sessionGeneration &+= 1
+        let generation = sessionGeneration
         isStopping = false
         transcript = []
         latestUserText = ""
         latestAssistantText = ""
-        discardAssistantAudioUntil = nil
         phase = .preparing
 
         do {
             try await requestMicrophoneAccess()
+            guard isCurrentSession(generation) else { return }
             try configureAudioSession()
             try configureAudioGraph()
-            try await connect(endpoint: endpoint, context: context)
+            try await connect(endpoint: endpoint, context: context, generation: generation)
         } catch {
+            guard isCurrentSession(generation) else { return }
+            closeConnection(sendStop: false)
             stopAudio()
             phase = .error(error.localizedDescription)
         }
@@ -74,16 +76,8 @@ final class VoiceSessionManager {
 
     func stop() {
         isStopping = true
-
-        if let data = #"{"type":"stop"}"#.data(using: .utf8),
-           let text = String(data: data, encoding: .utf8) {
-            webSocketTask?.send(.string(text)) { _ in }
-        }
-
-        webSocketTask?.cancel(with: .goingAway, reason: nil)
-        webSocketTask = nil
-        urlSession?.invalidateAndCancel()
-        urlSession = nil
+        sessionGeneration &+= 1
+        closeConnection(sendStop: true)
         stopAudio()
         phase = .idle
     }
@@ -96,7 +90,15 @@ final class VoiceSessionManager {
 
     // MARK: - Connection
 
-    private func connect(endpoint: URL, context: VoiceSessionContext) async throws {
+    private func isCurrentSession(_ generation: Int) -> Bool {
+        !isStopping && generation == sessionGeneration
+    }
+
+    private func connect(
+        endpoint: URL,
+        context: VoiceSessionContext,
+        generation: Int
+    ) async throws {
         phase = .connecting
 
         let session = URLSession(configuration: .default)
@@ -105,21 +107,25 @@ final class VoiceSessionManager {
         webSocketTask = task
         task.resume()
 
-        receiveNext()
+        receiveNext(task: task, generation: generation)
 
         let data = try JSONEncoder().encode(context)
         guard let setupString = String(data: data, encoding: .utf8) else {
             throw VoiceSessionError.invalidSetup
         }
 
-        try await send(.string(setupString))
+        try await send(.string(setupString), using: task)
+
+        guard isCurrentSession(generation), webSocketTask === task else {
+            task.cancel(with: .goingAway, reason: nil)
+            throw CancellationError()
+        }
     }
 
-    private func send(_ message: URLSessionWebSocketTask.Message) async throws {
-        guard let task = webSocketTask else {
-            throw VoiceSessionError.notConnected
-        }
-
+    private func send(
+        _ message: URLSessionWebSocketTask.Message,
+        using task: URLSessionWebSocketTask
+    ) async throws {
         let _: Void = try await withCheckedThrowingContinuation { continuation in
             task.send(message) { error in
                 if let error {
@@ -131,18 +137,20 @@ final class VoiceSessionManager {
         }
     }
 
-    private func receiveNext() {
-        guard let task = webSocketTask else { return }
-
+    private func receiveNext(task: URLSessionWebSocketTask, generation: Int) {
         task.receive { [weak self] result in
             DispatchQueue.main.async {
-                self?.handleReceive(result)
+                self?.handleReceive(result, task: task, generation: generation)
             }
         }
     }
 
-    private func handleReceive(_ result: Result<URLSessionWebSocketTask.Message, Error>) {
-        guard !isStopping else { return }
+    private func handleReceive(
+        _ result: Result<URLSessionWebSocketTask.Message, Error>,
+        task: URLSessionWebSocketTask,
+        generation: Int
+    ) {
+        guard isCurrentSession(generation), webSocketTask === task else { return }
 
         switch result {
         case .success(let message):
@@ -154,14 +162,28 @@ final class VoiceSessionManager {
             @unknown default:
                 break
             }
-            receiveNext()
+            if isCurrentSession(generation), webSocketTask === task {
+                receiveNext(task: task, generation: generation)
+            }
 
         case .failure(let error):
-            if !isStopping {
-                stopAudio()
-                phase = .error(error.localizedDescription)
-            }
+            closeConnection(sendStop: false)
+            stopAudio()
+            phase = .error(error.localizedDescription)
         }
+    }
+
+    private func closeConnection(sendStop: Bool) {
+        if sendStop,
+           let data = #"{"type":"stop"}"#.data(using: .utf8),
+           let text = String(data: data, encoding: .utf8) {
+            webSocketTask?.send(.string(text)) { _ in }
+        }
+
+        webSocketTask?.cancel(with: .goingAway, reason: nil)
+        webSocketTask = nil
+        urlSession?.invalidateAndCancel()
+        urlSession = nil
     }
 
     private func handleServerEvent(_ text: String) {
@@ -193,14 +215,16 @@ final class VoiceSessionManager {
 
         case "interrupted":
             flushPlayback()
-            discardAssistantAudioUntil = Date().addingTimeInterval(staleAssistantAudioDiscardDuration)
             phase = .listening
 
         case "turn_complete":
-            phase = .listening
+            if scheduledPlaybackBufferCount == 0 {
+                phase = .listening
+            }
 
         case "error":
             let message = payload["message"] as? String ?? "Voice session failed"
+            closeConnection(sendStop: false)
             stopAudio()
             phase = .error(message)
 
@@ -232,11 +256,7 @@ final class VoiceSessionManager {
     // MARK: - Capture
 
     private func requestMicrophoneAccess() async throws {
-        let granted = await withCheckedContinuation { continuation in
-            AVAudioSession.sharedInstance().requestRecordPermission { granted in
-                continuation.resume(returning: granted)
-            }
-        }
+        let granted = await AVAudioApplication.requestRecordPermission()
 
         guard granted else {
             throw VoiceSessionError.microphoneDenied
@@ -248,7 +268,10 @@ final class VoiceSessionManager {
         try session.setCategory(
             .playAndRecord,
             mode: .voiceChat,
-            options: [.defaultToSpeaker, .allowBluetoothHFP, .allowBluetoothA2DP]
+            // HFP provides a matched input/output route for full-duplex voice.
+            // A2DP is output-only and can break the route assumptions used by
+            // the system echo canceller.
+            options: [.defaultToSpeaker, .allowBluetoothHFP]
         )
         try session.setActive(true)
     }
@@ -281,15 +304,25 @@ final class VoiceSessionManager {
         captureConverter = converter
         captureOutputFormat = outputFormat
 
+        guard let voiceTask = webSocketTask else {
+            throw VoiceSessionError.notConnected
+        }
+
         inputNode.installTap(onBus: 0, bufferSize: 2_048, format: inputFormat) { [weak self] buffer, _ in
             guard let self,
                   let converter = self.captureConverter,
-                  let outputFormat = self.captureOutputFormat else {
+                  let outputFormat = self.captureOutputFormat,
+                  let bufferCopy = self.copyAudioBuffer(buffer) else {
                 return
             }
 
             self.audioQueue.async {
-                self.convertAndSend(buffer, converter: converter, outputFormat: outputFormat)
+                self.convertAndSend(
+                    bufferCopy,
+                    converter: converter,
+                    outputFormat: outputFormat,
+                    task: voiceTask
+                )
             }
         }
 
@@ -299,12 +332,42 @@ final class VoiceSessionManager {
         }
     }
 
+    private func copyAudioBuffer(_ source: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
+        guard let copy = AVAudioPCMBuffer(
+            pcmFormat: source.format,
+            frameCapacity: source.frameLength
+        ) else {
+            return nil
+        }
+
+        copy.frameLength = source.frameLength
+        let sourceBuffers = UnsafeMutableAudioBufferListPointer(source.mutableAudioBufferList)
+        let destinationBuffers = UnsafeMutableAudioBufferListPointer(copy.mutableAudioBufferList)
+        guard sourceBuffers.count == destinationBuffers.count else { return nil }
+
+        for index in sourceBuffers.indices {
+            let sourceBuffer = sourceBuffers[index]
+            let byteCount = Int(sourceBuffer.mDataByteSize)
+            guard let sourceData = sourceBuffer.mData,
+                  let destinationData = destinationBuffers[index].mData,
+                  byteCount <= Int(destinationBuffers[index].mDataByteSize) else {
+                return nil
+            }
+
+            destinationData.copyMemory(from: sourceData, byteCount: byteCount)
+            destinationBuffers[index].mDataByteSize = sourceBuffer.mDataByteSize
+        }
+
+        return copy
+    }
+
     private func convertAndSend(
         _ buffer: AVAudioPCMBuffer,
         converter: AVAudioConverter,
-        outputFormat: AVAudioFormat
+        outputFormat: AVAudioFormat,
+        task: URLSessionWebSocketTask
     ) {
-        guard webSocketTask != nil else { return }
+        guard task.state == .running else { return }
 
         let ratio = outputFormat.sampleRate / buffer.format.sampleRate
         let frameCapacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 32
@@ -338,9 +401,7 @@ final class VoiceSessionManager {
         }
 
         let sampleCount = Int(outputBuffer.frameLength)
-        if isPlaybackActive,
-           let playbackStartedAt,
-           Date().timeIntervalSince(playbackStartedAt) < playbackMicHoldoff {
+        if !echoGuard.shouldForwardMicrophone() {
             return
         }
 
@@ -349,27 +410,7 @@ final class VoiceSessionManager {
             count: sampleCount * MemoryLayout<Int16>.size
         )
 
-        webSocketTask?.send(.data(data)) { _ in }
-    }
-
-    private func rms(samples: UnsafePointer<Int16>, count: Int) -> Float {
-        guard count > 0 else { return 0 }
-
-        var sum: Float = 0
-        for index in 0..<count {
-            let sample = Float(samples[index]) / Float(Int16.max)
-            sum += sample * sample
-        }
-
-        return sqrt(sum / Float(count))
-    }
-
-    private var playbackMicHoldoff: TimeInterval {
-        #if targetEnvironment(simulator)
-        return 0.22
-        #else
-        return 0
-        #endif
+        task.send(.data(data)) { _ in }
     }
 
     // MARK: - Playback
@@ -404,8 +445,9 @@ final class VoiceSessionManager {
         inputNode: AVAudioInputNode,
         outputNode: AVAudioOutputNode
     ) throws {
+        // Enabling either I/O node configures both sides of the duplex graph.
+        // Verify both below so an unsupported route cannot silently lose AEC.
         try inputNode.setVoiceProcessingEnabled(true)
-        try outputNode.setVoiceProcessingEnabled(true)
 
         if !inputNode.isVoiceProcessingEnabled || !outputNode.isVoiceProcessingEnabled {
             throw VoiceSessionError.audioConfigurationFailed
@@ -425,14 +467,6 @@ final class VoiceSessionManager {
                 interleaved: false
               ) else {
             return
-        }
-
-        if let discardAssistantAudioUntil {
-            if Date() < discardAssistantAudioUntil {
-                return
-            }
-
-            self.discardAssistantAudioUntil = nil
         }
 
         let sampleCount = data.count / MemoryLayout<Int16>.size
@@ -460,16 +494,18 @@ final class VoiceSessionManager {
         }
 
         playerNode.volume = 0.82
+        if scheduledPlaybackBufferCount == 0 {
+            echoGuard.playbackDidStart()
+        }
+
+        let generation = playbackGeneration
         scheduledPlaybackBufferCount += 1
-        isPlaybackActive = true
-        playbackStartedAt = Date()
-        playerNode.scheduleBuffer(buffer) { [weak self] in
+        playerNode.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
             DispatchQueue.main.async {
-                guard let self else { return }
+                guard let self, self.playbackGeneration == generation else { return }
                 self.scheduledPlaybackBufferCount = max(0, self.scheduledPlaybackBufferCount - 1)
                 if self.scheduledPlaybackBufferCount == 0 {
-                    self.isPlaybackActive = false
-                    self.playbackStartedAt = nil
+                    self.echoGuard.playbackDidEnd()
                     if self.phase == .speaking {
                         self.phase = .listening
                     }
@@ -484,9 +520,9 @@ final class VoiceSessionManager {
     }
 
     private func flushPlayback() {
+        playbackGeneration &+= 1
         scheduledPlaybackBufferCount = 0
-        isPlaybackActive = false
-        playbackStartedAt = nil
+        echoGuard.playbackDidEnd()
         playerNode?.stop()
     }
 
@@ -499,10 +535,9 @@ final class VoiceSessionManager {
 
         playerNode?.stop()
         playerNode = nil
+        playbackGeneration &+= 1
         scheduledPlaybackBufferCount = 0
-        isPlaybackActive = false
-        playbackStartedAt = nil
-        discardAssistantAudioUntil = nil
+        echoGuard.playbackDidEnd()
 
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }

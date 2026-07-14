@@ -21,7 +21,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.dysun.simplereader
         MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: 10
+        CURRENT_PROJECT_VERSION: 11
         DEVELOPMENT_TEAM: 65H9JV933T
         INFOPLIST_FILE: SimpleReader/Resources/Info.plist
         SWIFT_VERSION: "5.0"
@@ -37,3 +37,26 @@ targets:
         product: ReadiumNavigator
       - package: ReadiumShared
         product: ReadiumAdapterGCDWebServer
+
+  SimpleReaderTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - SimpleReaderTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.dysun.simplereader.tests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.0"
+    dependencies:
+      - target: SimpleReader
+
+schemes:
+  SimpleReader:
+    build:
+      targets:
+        SimpleReader: all
+        SimpleReaderTests: [test]
+    test:
+      targets:
+        - SimpleReaderTests

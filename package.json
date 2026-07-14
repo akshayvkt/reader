@@ -9,6 +9,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "NODE_ENV=production node server.js",
+    "test": "node --test server.test.js",
     "lint": "eslint",
     "electron-dev": "NODE_ENV=development electron .",
     "electron-build": "export SKIP_NOTARIZE=true && export BUILD_TARGET=electron && next build && electron-builder --config.mac.identity=null",

@@ -14,6 +14,16 @@ const VOICE_WS_PATH = '/api/voice/ws';
 const VOICE_MODEL = process.env.GCP_VOICE_MODEL || 'gemini-live-2.5-flash-native-audio';
 const VOICE_LOCATION = process.env.GCP_VOICE_LOCATION || 'us-central1';
 const MAX_CONTEXT_CHARS = 70_000;
+const VOICE_PREFIX_PADDING_MS = readIntegerEnvironment('GCP_VOICE_PREFIX_PADDING_MS', 40, 0, 1_000);
+const VOICE_SILENCE_DURATION_MS = readIntegerEnvironment('GCP_VOICE_SILENCE_DURATION_MS', 600, 100, 2_000);
+
+function readIntegerEnvironment(name, fallback, minimum, maximum) {
+  const parsed = Number.parseInt(process.env[name] || '', 10);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  return Math.min(maximum, Math.max(minimum, parsed));
+}
 
 function getCredentials() {
   const projectId = process.env.GCP_PROJECT_ID;
@@ -116,9 +126,16 @@ function buildSetupMessage(setup) {
         parts: [{ text: buildSystemPrompt(setup) }],
       },
       realtimeInputConfig: {
+        activityHandling: 'START_OF_ACTIVITY_INTERRUPTS',
         automaticActivityDetection: {
-          startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH',
-          endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH',
+          disabled: false,
+          // AEC residual can still contain faint copies of speaker output.
+          // LOW avoids treating that residual as a user barge-in while still
+          // allowing normal speech to interrupt the response.
+          startOfSpeechSensitivity: 'START_SENSITIVITY_LOW',
+          endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',
+          prefixPaddingMs: VOICE_PREFIX_PADDING_MS,
+          silenceDurationMs: VOICE_SILENCE_DURATION_MS,
         },
       },
     },
@@ -150,6 +167,12 @@ async function openGeminiSession(clientWs, setup) {
   let assistantTranscriptBuffer = '';
   let lastUserTranscript = '';
   let lastAssistantTranscript = '';
+  const setupTimeout = setTimeout(() => {
+    if (!setupComplete) {
+      sendJSON(clientWs, { type: 'error', message: 'Voice service timed out while connecting' });
+      geminiWs.terminate();
+    }
+  }, 15_000);
 
   function flushAssistantTranscript() {
     const text = assistantTranscriptBuffer.replace(/\s+/g, ' ').trim();
@@ -165,13 +188,14 @@ async function openGeminiSession(clientWs, setup) {
     let data;
     try {
       data = JSON.parse(raw.toString());
-    } catch (error) {
+    } catch {
       sendJSON(clientWs, { type: 'error', message: 'Invalid response from Gemini Live' });
       return;
     }
 
     if (data.setupComplete && !setupComplete) {
       setupComplete = true;
+      clearTimeout(setupTimeout);
       sendJSON(clientWs, { type: 'ready' });
       return;
     }
@@ -185,7 +209,9 @@ async function openGeminiSession(clientWs, setup) {
     const parts = serverContent.modelTurn?.parts || [];
     for (const part of parts) {
       const inline = part.inlineData;
-      if (inline?.data && /audio|pcm/i.test(inline.mimeType || '')) {
+      // Interrupted events can carry a final stale model audio part. Never
+      // forward that part into the client's next turn.
+      if (!serverContent.interrupted && inline?.data && /audio|pcm/i.test(inline.mimeType || '')) {
         const audioBytes = Buffer.from(inline.data, 'base64');
         if (clientWs.readyState === WebSocket.OPEN) {
           clientWs.send(audioBytes, { binary: true });
@@ -218,10 +244,12 @@ async function openGeminiSession(clientWs, setup) {
   });
 
   geminiWs.on('error', (error) => {
+    clearTimeout(setupTimeout);
     sendJSON(clientWs, { type: 'error', message: error.message || 'Gemini Live connection failed' });
   });
 
   geminiWs.on('close', () => {
+    clearTimeout(setupTimeout);
     flushAssistantTranscript();
     if (clientWs.readyState === WebSocket.OPEN) {
       clientWs.close();
@@ -231,9 +259,14 @@ async function openGeminiSession(clientWs, setup) {
   return geminiWs;
 }
 
-function handleVoiceClient(clientWs) {
+function handleVoiceClient(clientWs, openSession = openGeminiSession) {
   let geminiWs = null;
-  let isClosing = false;
+  let isOpeningSession = false;
+  let clientClosed = false;
+  const clientSetupTimeout = setTimeout(() => {
+    sendJSON(clientWs, { type: 'error', message: 'Voice setup was not received in time' });
+    clientWs.close(1008, 'Voice setup timeout');
+  }, 10_000);
 
   clientWs.on('message', async (message, isBinary) => {
     try {
@@ -258,16 +291,30 @@ function handleVoiceClient(clientWs) {
 
       const payload = JSON.parse(message.toString());
       if (payload.type === 'setup') {
-        if (geminiWs) {
+        if (geminiWs || isOpeningSession) {
           return;
         }
+
+        clearTimeout(clientSetupTimeout);
+        isOpeningSession = true;
         sendJSON(clientWs, { type: 'connecting' });
-        geminiWs = await openGeminiSession(clientWs, payload);
+        try {
+          const openedSession = await openSession(clientWs, payload);
+          if (clientClosed || clientWs.readyState !== WebSocket.OPEN) {
+            openedSession.close();
+            return;
+          }
+
+          geminiWs = openedSession;
+        } finally {
+          isOpeningSession = false;
+        }
         return;
       }
 
       if (payload.type === 'stop') {
-        isClosing = true;
+        clientClosed = true;
+        clearTimeout(clientSetupTimeout);
         geminiWs?.close();
         clientWs.close();
       }
@@ -277,17 +324,20 @@ function handleVoiceClient(clientWs) {
   });
 
   clientWs.on('close', () => {
-    if (!isClosing) {
-      geminiWs?.close();
-    }
+    clientClosed = true;
+    clearTimeout(clientSetupTimeout);
+    geminiWs?.close();
   });
 
   clientWs.on('error', () => {
+    clientClosed = true;
+    clearTimeout(clientSetupTimeout);
     geminiWs?.close();
   });
 }
 
-app.prepare().then(() => {
+async function startServer() {
+  await app.prepare();
   const server = http.createServer((req, res) => {
     handle(req, res);
   });
@@ -311,4 +361,20 @@ app.prepare().then(() => {
     console.log(`> Ready on http://${hostname}:${port}`);
     console.log(`> Voice WebSocket listening at ${VOICE_WS_PATH}`);
   });
-});
+}
+
+if (require.main === module) {
+  startServer().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = {
+  buildSetupMessage,
+  buildSystemPrompt,
+  handleVoiceClient,
+  readIntegerEnvironment,
+  startServer,
+  trimContext,
+};
