@@ -336,6 +336,12 @@ function handleVoiceClient(clientWs, openSession = openGeminiSession) {
   });
 }
 
+function createVoiceConnectionHandler(openSession = openGeminiSession) {
+  // `ws` emits (socket, request). Adapt that callback shape explicitly so the
+  // HTTP request can never be mistaken for the injectable session factory.
+  return (clientWs) => handleVoiceClient(clientWs, openSession);
+}
+
 async function startServer() {
   await app.prepare();
   const server = http.createServer((req, res) => {
@@ -343,7 +349,7 @@ async function startServer() {
   });
 
   const voiceWss = new WebSocketServer({ noServer: true, maxPayload: 10 * 1024 * 1024 });
-  voiceWss.on('connection', handleVoiceClient);
+  voiceWss.on('connection', createVoiceConnectionHandler());
 
   server.on('upgrade', (req, socket, head) => {
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
@@ -373,6 +379,7 @@ if (require.main === module) {
 module.exports = {
   buildSetupMessage,
   buildSystemPrompt,
+  createVoiceConnectionHandler,
   handleVoiceClient,
   readIntegerEnvironment,
   startServer,

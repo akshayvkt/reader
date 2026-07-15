@@ -9,6 +9,7 @@ process.env.GCP_PRIVATE_KEY = 'not-a-real-key';
 
 const {
   buildSetupMessage,
+  createVoiceConnectionHandler,
   handleVoiceClient,
   readIntegerEnvironment,
   trimContext,
@@ -71,6 +72,28 @@ test('voice timing environment values are bounded', () => {
 test('book context remains bounded before opening a live session', () => {
   const oversized = `  ${'word '.repeat(20_000)}  `;
   assert.equal(trimContext(oversized).length, 70_000);
+});
+
+test('WebSocket request argument cannot replace the Gemini session factory', async () => {
+  const client = new FakeWebSocket();
+  const gemini = { close() {} };
+  let openCalls = 0;
+  const onConnection = createVoiceConnectionHandler(async () => {
+    openCalls += 1;
+    return gemini;
+  });
+
+  // This is the real `ws` connection-listener shape: (socket, request).
+  onConnection(client, { headers: { host: 'reader.test' } });
+  client.emit('message', Buffer.from(JSON.stringify({ type: 'setup' })), false);
+  await nextEventLoopTurn();
+
+  assert.equal(openCalls, 1);
+  assert.equal(
+    client.sent.some((message) => String(message).includes('openSession is not a function')),
+    false
+  );
+  client.emit('close');
 });
 
 test('only one Gemini session can open for a voice client', async () => {
