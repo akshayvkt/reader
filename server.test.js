@@ -77,6 +77,7 @@ test('assistant echo detection recognizes a partial replay without matching unre
 
   assert.ok(assistantEchoSimilarity(echoedInput, assistant) >= 0.8);
   assert.equal(isLikelyAssistantEcho(echoedInput, assistant), true);
+  assert.equal(isLikelyAssistantEcho('the character', assistant), true);
   assert.equal(isLikelyAssistantEcho(userInput, assistant), false);
   assert.equal(isLikelyAssistantEcho('yes', assistant), false);
   assert.equal(

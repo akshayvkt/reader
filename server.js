@@ -52,7 +52,7 @@ function normalizedTokens(text) {
 function assistantEchoSimilarity(inputText, assistantText) {
   const inputTokens = normalizedTokens(inputText);
   const assistantTokens = normalizedTokens(assistantText);
-  if (inputTokens.length < 3 || assistantTokens.length < 3) {
+  if (inputTokens.length < 2 || assistantTokens.length < 2) {
     return 0;
   }
 
