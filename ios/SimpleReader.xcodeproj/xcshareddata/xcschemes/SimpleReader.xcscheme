@@ -21,20 +21,6 @@
                ReferencedContainer = "container:SimpleReader.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "NO"
-            buildForProfiling = "NO"
-            buildForArchiving = "NO"
-            buildForAnalyzing = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "B7DAFF1A5D1B42AC41D2935F"
-               BuildableName = "SimpleReaderTests.xctest"
-               BlueprintName = "SimpleReaderTests"
-               ReferencedContainer = "container:SimpleReader.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -53,20 +39,7 @@
          </BuildableReference>
       </MacroExpansion>
       <Testables>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "B7DAFF1A5D1B42AC41D2935F"
-               BuildableName = "SimpleReaderTests.xctest"
-               BlueprintName = "SimpleReaderTests"
-               ReferencedContainer = "container:SimpleReader.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
       </Testables>
-      <CommandLineArguments>
-      </CommandLineArguments>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"

@@ -36,25 +36,13 @@
 		918F3FC6C146077B374D467C /* TypographySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7415AF6A70E3B1BC5A82897E /* TypographySettingsView.swift */; };
 		91B3E976646D0B9A61703019 /* MessageBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3118834902BF8E7D282CA7A /* MessageBubbleView.swift */; };
 		947FE0F1C75403560BF10CAB /* HeroBookCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68B75101BEE0FE4FC3F3887E /* HeroBookCard.swift */; };
-		A3894101DEBA50B7465DE74A /* VoiceEchoGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFE44AE8CAC8F065251D44BD /* VoiceEchoGuardTests.swift */; };
 		BC07A795212AC3AAF627FCB5 /* ReadiumService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F3DD8668CB09AB20C8C9155 /* ReadiumService.swift */; };
 		BD891651AECB3C19FD708324 /* MarkdownMessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B4F3BC94AD1BFDA5BF80080 /* MarkdownMessageView.swift */; };
 		C294FF0EBDABB4925F1D386D /* RecentBook.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D66AD08A9BFA7617606C220 /* RecentBook.swift */; };
 		C58D47BF7BE3641558231D3F /* TableOfContentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7168EF79487A0E19609D24CE /* TableOfContentsView.swift */; };
-		CE8C4F6B67DB6259766B63D9 /* VoiceEchoGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48AAD644C92A444E06B19530 /* VoiceEchoGuard.swift */; };
 		EFEA0BF307D4E4EF14D80179 /* ConversationContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A19A4EF8FB3AAAA19FE19D9 /* ConversationContext.swift */; };
 		FB5C0C89DC410389E4FD3741 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7A9B1C8050B89A0472AEC97 /* DesignSystem.swift */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		4B341A1B2B79D2981C82E3BD /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 925EEE81B0B5442B011C392F /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 1A91AB7B42FEEF9E867134AC;
-			remoteInfo = SimpleReader;
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		1A19A4EF8FB3AAAA19FE19D9 /* ConversationContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationContext.swift; sourceTree = "<group>"; };
@@ -66,7 +54,6 @@
 		3DB7E02712191EB8C5F61CCA /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		42450502D5C3DAF42DD14770 /* SimpleReaderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleReaderApp.swift; sourceTree = "<group>"; };
 		44DF1E963DA3947DCFA34E11 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
-		48AAD644C92A444E06B19530 /* VoiceEchoGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceEchoGuard.swift; sourceTree = "<group>"; };
 		4BB87F297B42A21C642F9471 /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
 		61975C9E8893D467733D9DDE /* ScopeSelectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopeSelectorView.swift; sourceTree = "<group>"; };
 		68B75101BEE0FE4FC3F3887E /* HeroBookCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroBookCard.swift; sourceTree = "<group>"; };
@@ -85,10 +72,8 @@
 		BD822462A59527EEA5C26373 /* ReaderToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderToolbar.swift; sourceTree = "<group>"; };
 		C593B20BBD36BFD9316713EB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C9D12099F33BEB5A71BF97A1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		CFE44AE8CAC8F065251D44BD /* VoiceEchoGuardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceEchoGuardTests.swift; sourceTree = "<group>"; };
 		D3118834902BF8E7D282CA7A /* MessageBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubbleView.swift; sourceTree = "<group>"; };
 		D9F481DA916AFB506718E301 /* ReaderHostingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderHostingController.swift; sourceTree = "<group>"; };
-		DC496953F271178E4C717F1A /* SimpleReaderTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SimpleReaderTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DE7E6947FDB57C1A669A4369 /* VoiceSessionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSessionModels.swift; sourceTree = "<group>"; };
 		E7661A618D6587E02B2A491C /* BookImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookImporter.swift; sourceTree = "<group>"; };
 		E7A9B1C8050B89A0472AEC97 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
@@ -129,7 +114,6 @@
 				E7661A618D6587E02B2A491C /* BookImporter.swift */,
 				A64E930610751339076EB31E /* BookLibrary.swift */,
 				6F3DD8668CB09AB20C8C9155 /* ReadiumService.swift */,
-				48AAD644C92A444E06B19530 /* VoiceEchoGuard.swift */,
 				3B21F81FAE8FA8732DD0D8B5 /* VoiceSessionManager.swift */,
 			);
 			path = Services;
@@ -254,19 +238,10 @@
 			path = App;
 			sourceTree = "<group>";
 		};
-		E8C5262BE349D9F8D5DC612E /* SimpleReaderTests */ = {
-			isa = PBXGroup;
-			children = (
-				CFE44AE8CAC8F065251D44BD /* VoiceEchoGuardTests.swift */,
-			);
-			path = SimpleReaderTests;
-			sourceTree = "<group>";
-		};
 		F63F65BCD8F923783E4E15BA = {
 			isa = PBXGroup;
 			children = (
 				879035824D0708010C3B33A6 /* SimpleReader */,
-				E8C5262BE349D9F8D5DC612E /* SimpleReaderTests */,
 				FD631D979DEECF814CCAE4BE /* Products */,
 			);
 			sourceTree = "<group>";
@@ -275,7 +250,6 @@
 			isa = PBXGroup;
 			children = (
 				3184FB6B4ABE205AF958C788 /* SimpleReader.app */,
-				DC496953F271178E4C717F1A /* SimpleReaderTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -305,24 +279,6 @@
 			productName = SimpleReader;
 			productReference = 3184FB6B4ABE205AF958C788 /* SimpleReader.app */;
 			productType = "com.apple.product-type.application";
-		};
-		B7DAFF1A5D1B42AC41D2935F /* SimpleReaderTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 0A9CFEBD8429C0659A6AA61E /* Build configuration list for PBXNativeTarget "SimpleReaderTests" */;
-			buildPhases = (
-				D592866F0862210957283406 /* Sources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				9F6873BB02DE21FD52105334 /* PBXTargetDependency */,
-			);
-			name = SimpleReaderTests;
-			packageProductDependencies = (
-			);
-			productName = SimpleReaderTests;
-			productReference = DC496953F271178E4C717F1A /* SimpleReaderTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -356,7 +312,6 @@
 			projectRoot = "";
 			targets = (
 				1A91AB7B42FEEF9E867134AC /* SimpleReader */,
-				B7DAFF1A5D1B42AC41D2935F /* SimpleReaderTests */,
 			);
 		};
 /* End PBXProject section */
@@ -404,50 +359,15 @@
 				7B279B50E8156890205C1374 /* SimpleReaderApp.swift in Sources */,
 				C58D47BF7BE3641558231D3F /* TableOfContentsView.swift in Sources */,
 				918F3FC6C146077B374D467C /* TypographySettingsView.swift in Sources */,
-				CE8C4F6B67DB6259766B63D9 /* VoiceEchoGuard.swift in Sources */,
 				0F323A3DEAFB18BBBC2D77ED /* VoiceOverlayView.swift in Sources */,
 				008666BA9B0BF89C995FF4CA /* VoiceSessionManager.swift in Sources */,
 				8742544223EC5BC3E24B0F6A /* VoiceSessionModels.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D592866F0862210957283406 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				A3894101DEBA50B7465DE74A /* VoiceEchoGuardTests.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
 
-/* Begin PBXTargetDependency section */
-		9F6873BB02DE21FD52105334 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 1A91AB7B42FEEF9E867134AC /* SimpleReader */;
-			targetProxy = 4B341A1B2B79D2981C82E3BD /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
-
 /* Begin XCBuildConfiguration section */
-		1854666D2AFAF0200C2C1734 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.dysun.simplereader.tests;
-				SDKROOT = iphoneos;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SimpleReader.app/SimpleReader";
-			};
-			name = Release;
-		};
 		248436B5619B2E945A346EE9 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -508,24 +428,6 @@
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
-		};
-		573F43CC7A401B7DFC3ED684 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.dysun.simplereader.tests;
-				SDKROOT = iphoneos;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SimpleReader.app/SimpleReader";
 			};
 			name = Debug;
 		};
@@ -630,15 +532,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		0A9CFEBD8429C0659A6AA61E /* Build configuration list for PBXNativeTarget "SimpleReaderTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				573F43CC7A401B7DFC3ED684 /* Debug */,
-				1854666D2AFAF0200C2C1734 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
 		537959B4B43951F5C9725170 /* Build configuration list for PBXNativeTarget "SimpleReader" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
