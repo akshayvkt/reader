@@ -6,11 +6,17 @@ const { WebSocket } = require('ws');
 process.env.GCP_PROJECT_ID = 'voice-test-project';
 process.env.GCP_SERVICE_ACCOUNT_EMAIL = 'voice-test@example.com';
 process.env.GCP_PRIVATE_KEY = 'not-a-real-key';
+process.env.GCP_VOICE_FALSE_INTERRUPTION_TIMEOUT_MS = '500';
+process.env.GCP_VOICE_SPEECH_END_GRACE_MS = '500';
 
 const {
+  assistantEchoSimilarity,
+  buildFalseInterruptionRecoveryMessage,
   buildSetupMessage,
   createVoiceConnectionHandler,
   handleVoiceClient,
+  isLikelyAssistantEcho,
+  openGeminiSession,
   readIntegerEnvironment,
   trimContext,
 } = require('./server');
@@ -45,6 +51,12 @@ function nextEventLoopTurn() {
   return new Promise((resolve) => setImmediate(resolve));
 }
 
+function decodedJSONMessages(socket) {
+  return socket.sent
+    .filter((message) => typeof message === 'string')
+    .map((message) => JSON.parse(message));
+}
+
 test('voice setup rejects echo residual without disabling barge-in', () => {
   const message = buildSetupMessage({ bookTitle: 'Test Book' });
   const realtime = message.setup.realtimeInputConfig;
@@ -54,8 +66,35 @@ test('voice setup rejects echo residual without disabling barge-in', () => {
   assert.equal(detection.disabled, false);
   assert.equal(detection.startOfSpeechSensitivity, 'START_SENSITIVITY_LOW');
   assert.equal(detection.endOfSpeechSensitivity, 'END_SENSITIVITY_LOW');
-  assert.equal(detection.prefixPaddingMs, 40);
+  assert.equal(detection.prefixPaddingMs, 300);
   assert.equal(detection.silenceDurationMs, 600);
+});
+
+test('assistant echo detection recognizes a partial replay without matching unrelated speech', () => {
+  const assistant = 'The character leaves the village because she no longer trusts the council.';
+  const echoedInput = 'because she no longer trusts the council';
+  const userInput = 'Why did her brother stay behind?';
+
+  assert.ok(assistantEchoSimilarity(echoedInput, assistant) >= 0.8);
+  assert.equal(isLikelyAssistantEcho(echoedInput, assistant), true);
+  assert.equal(isLikelyAssistantEcho(userInput, assistant), false);
+  assert.equal(isLikelyAssistantEcho('yes', assistant), false);
+  assert.equal(
+    isLikelyAssistantEcho(
+      'Why does she no longer trust the council?',
+      'She leaves because she no longer trusts the council.'
+    ),
+    false
+  );
+});
+
+test('false interruption recovery asks Gemini to continue without exposing a user transcript', () => {
+  const message = buildFalseInterruptionRecoveryMessage();
+  const turn = message.client_content.turns[0];
+
+  assert.equal(turn.role, 'user');
+  assert.equal(message.client_content.turn_complete, true);
+  assert.match(turn.parts[0].text, /Continue your previous answer/);
 });
 
 test('voice timing environment values are bounded', () => {
@@ -115,6 +154,214 @@ test('only one Gemini session can open for a voice client', async () => {
   opening.resolve(gemini);
   await nextEventLoopTurn();
   client.emit('close');
+});
+
+test('client interruption verdict is forwarded only to the active Gemini session', async () => {
+  const client = new FakeWebSocket();
+  const receivedEvents = [];
+  const gemini = {
+    close() {},
+    handleClientEvent(payload) {
+      receivedEvents.push(payload);
+    },
+  };
+
+  handleVoiceClient(client, async () => gemini);
+  client.emit('message', Buffer.from(JSON.stringify({ type: 'setup' })), false);
+  await nextEventLoopTurn();
+  client.emit(
+    'message',
+    Buffer.from(JSON.stringify({
+      type: 'interruption_verdict',
+      interruptionId: 3,
+      verdict: 'speech',
+    })),
+    false
+  );
+
+  assert.deepEqual(receivedEvents, [
+    { type: 'interruption_verdict', interruptionId: 3, verdict: 'speech' },
+  ]);
+  client.emit('close');
+});
+
+test('echo-triggered model output is quarantined and discarded before recovery', async () => {
+  const client = new FakeWebSocket();
+  const gemini = new FakeWebSocket();
+  await openGeminiSession(client, { bookTitle: 'Test Book' }, {
+    getAccessToken: async () => 'test-token',
+    createWebSocket: () => gemini,
+  });
+
+  gemini.emit('open');
+  gemini.emit('message', Buffer.from(JSON.stringify({ setupComplete: {} })));
+  gemini.emit('message', Buffer.from(JSON.stringify({
+    serverContent: {
+      outputTranscription: {
+        text: 'The character leaves because she no longer trusts the council.',
+      },
+      interrupted: true,
+    },
+  })));
+
+  const unwantedReply = Buffer.from('reply-to-echo');
+  gemini.emit('message', Buffer.from(JSON.stringify({
+    serverContent: {
+      modelTurn: {
+        parts: [{
+          inlineData: {
+            mimeType: 'audio/pcm;rate=24000',
+            data: unwantedReply.toString('base64'),
+          },
+        }],
+      },
+      outputTranscription: { text: 'A wrong answer to the echo.' },
+      turnComplete: true,
+    },
+  })));
+  gemini.emit('message', Buffer.from(JSON.stringify({
+    serverContent: {
+      inputTranscription: { text: 'because she no longer trusts the council' },
+    },
+  })));
+
+  const events = decodedJSONMessages(client);
+  assert.ok(events.some((event) => event.type === 'interrupted'));
+  assert.ok(events.some((event) => event.type === 'false_interruption'));
+  assert.equal(client.sent.some((message) => Buffer.isBuffer(message) && message.equals(unwantedReply)), false);
+  assert.equal(events.some((event) => event.type === 'turn_complete'), false);
+  assert.equal(events.some((event) => event.role === 'user'), false);
+
+  gemini.emit('message', Buffer.from(JSON.stringify({
+    serverContent: {
+      inputTranscription: { text: 'because she no longer trusts the council' },
+    },
+  })));
+  assert.equal(decodedJSONMessages(client).some((event) => event.role === 'user'), false);
+
+  const recovery = decodedJSONMessages(gemini).at(-1);
+  assert.match(recovery.client_content.turns[0].parts[0].text, /Continue your previous answer/);
+  gemini.emit('close');
+});
+
+test('a genuine interruption is confirmed before its quarantined reply is released', async () => {
+  const client = new FakeWebSocket();
+  const gemini = new FakeWebSocket();
+  await openGeminiSession(client, { bookTitle: 'Test Book' }, {
+    getAccessToken: async () => 'test-token',
+    createWebSocket: () => gemini,
+  });
+
+  gemini.emit('open');
+  gemini.emit('message', Buffer.from(JSON.stringify({ setupComplete: {} })));
+  gemini.emit('message', Buffer.from(JSON.stringify({
+    serverContent: {
+      outputTranscription: { text: 'The character is leaving the village.' },
+      interrupted: true,
+    },
+  })));
+
+  const genuineReply = Buffer.from('reply-to-user');
+  gemini.emit('message', Buffer.from(JSON.stringify({
+    serverContent: {
+      modelTurn: {
+        parts: [{
+          inlineData: {
+            mimeType: 'audio/pcm;rate=24000',
+            data: genuineReply.toString('base64'),
+          },
+        }],
+      },
+      outputTranscription: { text: 'Her brother stayed to protect the others.' },
+      turnComplete: true,
+      inputTranscription: { text: 'Why did her brother stay behind?' },
+    },
+  })));
+
+  const confirmationIndex = client.sent.findIndex((message) => (
+    typeof message === 'string' && JSON.parse(message).type === 'interruption_confirmed'
+  ));
+  const replyIndex = client.sent.findIndex((message) => (
+    Buffer.isBuffer(message) && message.equals(genuineReply)
+  ));
+  const events = decodedJSONMessages(client);
+
+  assert.ok(confirmationIndex >= 0);
+  assert.ok(replyIndex > confirmationIndex);
+  assert.ok(events.some((event) => event.type === 'turn_complete'));
+  assert.ok(events.some((event) => event.role === 'user' && /brother/.test(event.text)));
+  assert.ok(events.some((event) => event.role === 'assistant' && /protect/.test(event.text)));
+  gemini.emit('close');
+});
+
+test('client speech plus a replacement answer confirms even without input transcription', async () => {
+  const client = new FakeWebSocket();
+  const gemini = new FakeWebSocket();
+  await openGeminiSession(client, { bookTitle: 'Test Book' }, {
+    getAccessToken: async () => 'test-token',
+    createWebSocket: () => gemini,
+  });
+
+  gemini.emit('open');
+  gemini.emit('message', Buffer.from(JSON.stringify({ setupComplete: {} })));
+  gemini.emit('message', Buffer.from(JSON.stringify({
+    serverContent: {
+      outputTranscription: { text: 'The character is leaving the village.' },
+      interrupted: true,
+    },
+  })));
+  gemini.handleClientEvent({ type: 'interruption_verdict', interruptionId: 1, verdict: 'speech' });
+  gemini.handleClientEvent({ type: 'interruption_verdict', interruptionId: 1, verdict: 'speech_ended' });
+
+  const genuineReply = Buffer.from('native-audio-reply');
+  gemini.emit('message', Buffer.from(JSON.stringify({
+    serverContent: {
+      modelTurn: {
+        parts: [{
+          inlineData: {
+            mimeType: 'audio/pcm;rate=24000',
+            data: genuineReply.toString('base64'),
+          },
+        }],
+      },
+    },
+  })));
+
+  const confirmationIndex = client.sent.findIndex((message) => (
+    typeof message === 'string' && JSON.parse(message).type === 'interruption_confirmed'
+  ));
+  const replyIndex = client.sent.findIndex((message) => (
+    Buffer.isBuffer(message) && message.equals(genuineReply)
+  ));
+  assert.ok(confirmationIndex >= 0);
+  assert.ok(replyIndex > confirmationIndex);
+  gemini.emit('close');
+});
+
+test('client speech without a transcript or replacement answer recovers instead of going silent', async () => {
+  const client = new FakeWebSocket();
+  const gemini = new FakeWebSocket();
+  await openGeminiSession(client, { bookTitle: 'Test Book' }, {
+    getAccessToken: async () => 'test-token',
+    createWebSocket: () => gemini,
+  });
+
+  gemini.emit('open');
+  gemini.emit('message', Buffer.from(JSON.stringify({ setupComplete: {} })));
+  gemini.emit('message', Buffer.from(JSON.stringify({
+    serverContent: {
+      outputTranscription: { text: 'The character is leaving the village.' },
+      interrupted: true,
+    },
+  })));
+  gemini.handleClientEvent({ type: 'interruption_verdict', interruptionId: 1, verdict: 'speech' });
+  gemini.handleClientEvent({ type: 'interruption_verdict', interruptionId: 1, verdict: 'speech_ended' });
+  await new Promise((resolve) => setTimeout(resolve, 550));
+
+  const events = decodedJSONMessages(client);
+  assert.ok(events.some((event) => event.type === 'false_interruption'));
+  assert.equal(events.some((event) => event.type === 'interruption_confirmed'), false);
+  gemini.emit('close');
 });
 
 test('a Gemini session finishing after its client closes is immediately closed', async () => {

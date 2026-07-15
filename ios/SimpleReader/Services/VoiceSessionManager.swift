@@ -1,6 +1,7 @@
 import AVFoundation
 import Foundation
 import Observation
+import OSLog
 
 @Observable
 final class VoiceSessionManager {
@@ -33,7 +34,14 @@ final class VoiceSessionManager {
     @ObservationIgnored private var sessionGeneration = 0
     @ObservationIgnored private var scheduledPlaybackBufferCount = 0
     @ObservationIgnored private var playbackGeneration = 0
+    @ObservationIgnored private var isPlaybackPausedForInterruption = false
     @ObservationIgnored private let echoGuard = VoiceEchoGuard()
+    @ObservationIgnored private var microphonePreRoll: [(data: Data, duration: TimeInterval)] = []
+    @ObservationIgnored private var microphonePreRollDuration: TimeInterval = 0
+    @ObservationIgnored private var localSpeechTracker = VoiceSpeechActivityTracker()
+
+    private let maximumMicrophonePreRollDuration: TimeInterval = 0.45
+    private static let logger = Logger(subsystem: "com.dysun.simplereader", category: "Voice")
 
     private static var defaultEndpoint: URL {
         if let override = ProcessInfo.processInfo.environment["SIMPLEREADER_VOICE_WS_URL"],
@@ -214,8 +222,36 @@ final class VoiceSessionManager {
             appendTranscript(role: role, text: text)
 
         case "interrupted":
+            let interruptionID = payload["interruptionId"] as? Int
+            let locallyConfirmedSpeech = echoGuard.hasConfirmedBargeIn
+
+            if locallyConfirmedSpeech {
+                let snapshot = echoGuard.snapshot
+                Self.logger.info(
+                    "Confirmed local barge-in micRMS=\(snapshot.microphoneRMS, privacy: .public) playbackRMS=\(snapshot.playbackRMS, privacy: .public) threshold=\(snapshot.speechThresholdRMS, privacy: .public)"
+                )
+                flushPlayback()
+                sendInterruptionVerdict(
+                    interruptionID: interruptionID,
+                    verdict: "speech"
+                )
+            } else {
+                Self.logger.notice("Pausing playback while interruption is validated")
+                pausePlaybackForInterruption()
+                sendInterruptionVerdict(
+                    interruptionID: interruptionID,
+                    verdict: "unknown"
+                )
+            }
+            phase = .listening
+
+        case "interruption_confirmed":
             flushPlayback()
             phase = .listening
+
+        case "false_interruption":
+            Self.logger.notice("Resuming after false interruption")
+            resumePlaybackAfterFalseInterruption()
 
         case "turn_complete":
             if scheduledPlaybackBufferCount == 0 {
@@ -230,6 +266,34 @@ final class VoiceSessionManager {
 
         default:
             break
+        }
+    }
+
+    private func sendInterruptionVerdict(
+        interruptionID: Int?,
+        verdict: String,
+        using specifiedTask: URLSessionWebSocketTask? = nil
+    ) {
+        guard let task = specifiedTask ?? webSocketTask,
+              task.state == .running else { return }
+
+        var payload: [String: Any] = [
+            "type": "interruption_verdict",
+            "verdict": verdict,
+        ]
+        if let interruptionID {
+            payload["interruptionId"] = interruptionID
+        }
+
+        guard let data = try? JSONSerialization.data(withJSONObject: payload),
+              let text = String(data: data, encoding: .utf8) else {
+            return
+        }
+
+        task.send(.string(text)) { error in
+            if let error {
+                Self.logger.error("Could not report interruption verdict: \(error.localizedDescription, privacy: .public)")
+            }
         }
     }
 
@@ -274,6 +338,12 @@ final class VoiceSessionManager {
             options: [.defaultToSpeaker, .allowBluetoothHFP]
         )
         try session.setActive(true)
+
+        let inputs = session.currentRoute.inputs.map(\.portType.rawValue).joined(separator: ",")
+        let outputs = session.currentRoute.outputs.map(\.portType.rawValue).joined(separator: ",")
+        Self.logger.info(
+            "Audio session active input=\(inputs, privacy: .public) output=\(outputs, privacy: .public) rate=\(session.sampleRate, privacy: .public)"
+        )
     }
 
     private func startMicrophoneStreaming() throws {
@@ -401,16 +471,84 @@ final class VoiceSessionManager {
         }
 
         let sampleCount = Int(outputBuffer.frameLength)
-        if !echoGuard.shouldForwardMicrophone() {
-            return
-        }
-
         let data = Data(
             bytes: samples,
             count: sampleCount * MemoryLayout<Int16>.size
         )
+        let duration = Double(sampleCount) / outputFormat.sampleRate
+        let microphoneRMS = rms(samples: samples, count: sampleCount)
+        updateLocalBargeInActivity(
+            microphoneRMS: microphoneRMS,
+            duration: duration,
+            task: task
+        )
 
-        task.send(.data(data)) { _ in }
+        switch echoGuard.microphoneDecision(rms: microphoneRMS, duration: duration) {
+        case .suppress:
+            retainMicrophonePreRoll(data, duration: duration)
+
+        case .beginBargeIn:
+            localSpeechTracker.begin()
+            let preRoll = drainMicrophonePreRoll()
+            for frame in preRoll {
+                task.send(.data(frame)) { _ in }
+            }
+            task.send(.data(data)) { _ in }
+
+        case .forward:
+            discardMicrophonePreRoll()
+            task.send(.data(data)) { _ in }
+        }
+    }
+
+    private func updateLocalBargeInActivity(
+        microphoneRMS: Float,
+        duration: TimeInterval,
+        task: URLSessionWebSocketTask
+    ) {
+        guard localSpeechTracker.update(rms: microphoneRMS, duration: duration) else { return }
+        sendInterruptionVerdict(
+            interruptionID: nil,
+            verdict: "speech_ended",
+            using: task
+        )
+    }
+
+    private func resetLocalBargeInActivity() {
+        localSpeechTracker.reset()
+    }
+
+    private func rms(samples: UnsafePointer<Int16>, count: Int) -> Float {
+        guard count > 0 else { return 0 }
+
+        var sum: Float = 0
+        for index in 0..<count {
+            let sample = Float(samples[index]) / Float(Int16.max)
+            sum += sample * sample
+        }
+        return sqrt(sum / Float(count))
+    }
+
+    private func retainMicrophonePreRoll(_ data: Data, duration: TimeInterval) {
+        microphonePreRoll.append((data: data, duration: duration))
+        microphonePreRollDuration += duration
+
+        while microphonePreRollDuration > maximumMicrophonePreRollDuration,
+              !microphonePreRoll.isEmpty {
+            let discarded = microphonePreRoll.removeFirst()
+            microphonePreRollDuration = max(0, microphonePreRollDuration - discarded.duration)
+        }
+    }
+
+    private func drainMicrophonePreRoll() -> [Data] {
+        let frames = microphonePreRoll.map(\.data)
+        discardMicrophonePreRoll()
+        return frames
+    }
+
+    private func discardMicrophonePreRoll() {
+        microphonePreRoll = []
+        microphonePreRollDuration = 0
     }
 
     // MARK: - Playback
@@ -434,11 +572,18 @@ final class VoiceSessionManager {
 
         engine.attach(player)
         engine.connect(player, to: engine.mainMixerNode, format: playbackFormat)
+        player.installTap(onBus: 0, bufferSize: 256, format: nil) { [weak echoGuard] buffer, _ in
+            echoGuard?.playbackLevelDidChange(rms: Self.rms(buffer: buffer))
+        }
         engine.prepare()
         try engine.start()
 
         audioEngine = engine
         playerNode = player
+
+        Self.logger.info(
+            "Voice processing enabled input=\(inputNode.isVoiceProcessingEnabled, privacy: .public) output=\(outputNode.isVoiceProcessingEnabled, privacy: .public) inputFormat=\(inputNode.outputFormat(forBus: 0).description, privacy: .public) outputFormat=\(outputNode.inputFormat(forBus: 0).description, privacy: .public)"
+        )
     }
 
     private func enableVoiceProcessing(
@@ -455,6 +600,28 @@ final class VoiceSessionManager {
 
         inputNode.isVoiceProcessingBypassed = false
         inputNode.isVoiceProcessingAGCEnabled = true
+    }
+
+    private static func rms(buffer: AVAudioPCMBuffer) -> Float {
+        guard let channels = buffer.floatChannelData,
+              buffer.frameLength > 0 else {
+            return 0
+        }
+
+        let frameCount = Int(buffer.frameLength)
+        let channelCount = Int(buffer.format.channelCount)
+        guard channelCount > 0 else { return 0 }
+
+        var sum: Float = 0
+        for channelIndex in 0..<channelCount {
+            let channel = channels[channelIndex]
+            for frameIndex in 0..<frameCount {
+                let sample = channel[frameIndex]
+                sum += sample * sample
+            }
+        }
+
+        return sqrt(sum / Float(frameCount * channelCount))
     }
 
     private func playAudio(_ data: Data) {
@@ -495,6 +662,9 @@ final class VoiceSessionManager {
 
         playerNode.volume = 0.82
         if scheduledPlaybackBufferCount == 0 {
+            audioQueue.async { [weak self] in
+                self?.resetLocalBargeInActivity()
+            }
             echoGuard.playbackDidStart()
         }
 
@@ -506,24 +676,56 @@ final class VoiceSessionManager {
                 self.scheduledPlaybackBufferCount = max(0, self.scheduledPlaybackBufferCount - 1)
                 if self.scheduledPlaybackBufferCount == 0 {
                     self.echoGuard.playbackDidEnd()
-                    if self.phase == .speaking {
+                    if self.phase == .speaking && !self.isPlaybackPausedForInterruption {
                         self.phase = .listening
                     }
                 }
             }
         }
-        if !playerNode.isPlaying {
+        if !playerNode.isPlaying && !isPlaybackPausedForInterruption {
             playerNode.play()
         }
 
-        phase = .speaking
+        if !isPlaybackPausedForInterruption {
+            phase = .speaking
+        }
     }
 
     private func flushPlayback() {
         playbackGeneration &+= 1
         scheduledPlaybackBufferCount = 0
-        echoGuard.playbackDidEnd()
+        isPlaybackPausedForInterruption = false
+        echoGuard.playbackWasCancelled()
         playerNode?.stop()
+        audioQueue.async { [weak self] in
+            self?.discardMicrophonePreRoll()
+        }
+    }
+
+    private func pausePlaybackForInterruption() {
+        isPlaybackPausedForInterruption = scheduledPlaybackBufferCount > 0
+        if isPlaybackPausedForInterruption {
+            playerNode?.pause()
+        }
+        echoGuard.playbackWasCancelled()
+        audioQueue.async { [weak self] in
+            self?.discardMicrophonePreRoll()
+        }
+    }
+
+    private func resumePlaybackAfterFalseInterruption() {
+        isPlaybackPausedForInterruption = false
+        audioQueue.async { [weak self] in
+            self?.resetLocalBargeInActivity()
+        }
+        guard scheduledPlaybackBufferCount > 0 else {
+            phase = .listening
+            return
+        }
+
+        echoGuard.playbackDidStart()
+        playerNode?.play()
+        phase = .speaking
     }
 
     private func stopAudio() {
@@ -533,11 +735,17 @@ final class VoiceSessionManager {
         captureConverter = nil
         captureOutputFormat = nil
 
+        playerNode?.removeTap(onBus: 0)
         playerNode?.stop()
         playerNode = nil
         playbackGeneration &+= 1
         scheduledPlaybackBufferCount = 0
-        echoGuard.playbackDidEnd()
+        isPlaybackPausedForInterruption = false
+        echoGuard.playbackWasCancelled()
+        audioQueue.sync {
+            discardMicrophonePreRoll()
+            resetLocalBargeInActivity()
+        }
 
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
